@@ -1,0 +1,55 @@
+# =====================================================
+# AI安全事件库 — 主配置文件
+# 优先级: application-dev.yml > application.yml
+# 激活方式: spring.profiles.active=dev
+# =====================================================
+
+server:
+  # 服务端口 (8080 为默认，如冲突可改为 8888)
+  port: 8080
+  servlet:
+    # 统一路径前缀，所有接口以 /api 开头
+    context-path: /api
+
+spring:
+  # 默认激活 dev 环境配置
+  profiles:
+    active: dev
+
+  # Jackson 全局日期格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# ---- MyBatis Plus 配置 ----
+mybatis-plus:
+  # 全局配置
+  global-config:
+    # 数据库字段命名策略: java采用驼峰，数据库采用下划线 (自动映射)
+    db-config:
+      # 逻辑删除标记名 (对应数据库 del_flag 字段)
+      logic-delete-field: delFlag
+      logic-delete-value: "1"    # 已删除
+      logic-not-delete-value: "0" # 未删除
+  # 实体类包路径 (用于 TypeAlias)
+  type-aliases-package: com.aisafe.**.entity
+  # 配置输出 (生产环境建议关闭)
+  configuration:
+    # SQL 日志 (dev 环境开启，方便调试)
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# ---- Sa-Token 配置 ----
+sa-token:
+  # Token 名称 (前端请求头: Authorization: Bearer xxx)
+  token-name: Authorization
+  # Token 前缀
+  token-prefix: Bearer
+  # Token 有效期: 2小时 (单位: 秒)
+  timeout: 7200
+  # 是否允许同一账号多地同时登录 (true=允许, false=互踢)
+  is-concurrent: true
+  # Token 风格: 从请求头读取
+  is-read-header: true
+  # JWT 密钥 (生产环境务必更换为复杂随机字符串)
+  jwt-secret-key: AiSafeLibrary2026SecretKeyForJWT

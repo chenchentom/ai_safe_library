@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aisafe</groupId>
+        <artifactId>ai-safe-library</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ai-safe-library-business</artifactId>
+    <name>业务模块</name>
+    <description>线索发现/风险线索/报送线索/共享线索/标签管理 — 阶段二实施</description>
+
+    <dependencies>
+        <!-- 依赖系统模块 (system 已引入 framework + common) -->
+        <dependency>
+            <groupId>com.aisafe</groupId>
+            <artifactId>ai-safe-library-system</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+    </dependencies>
+
+</project>

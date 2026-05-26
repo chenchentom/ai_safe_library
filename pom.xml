@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <!--
+        AI安全事件库 — 父POM
+        职责：统一管理依赖版本号，不包含具体依赖声明
+        子模块通过继承获取版本号，按需声明依赖
+    -->
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.aisafe</groupId>
+    <artifactId>ai-safe-library</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>AI安全事件库</name>
+    <description>企业级 AI 安全事件管理平台</description>
+
+    <!-- 子模块声明 -->
+    <modules>
+        <module>ai-safe-library-common</module>
+        <module>ai-safe-library-framework</module>
+        <module>ai-safe-library-system</module>
+        <module>ai-safe-library-business</module>
+        <module>ai-safe-library-admin</module>
+    </modules>
+
+    <!-- Spring Boot 3.2.x 父POM — 管理基础依赖版本 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/> <!-- 从 Maven 仓库拉取，不依赖本地 -->
+    </parent>
+
+    <properties>
+        <!-- 编译配置 -->
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- 核心依赖版本 (Spring Boot 已管理的不再重复声明) -->
+        <sa-token.version>1.38.0</sa-token.version>
+        <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <hutool.version>5.8.27</hutool.version>
+        <mysql.version>8.0.33</mysql.version>
+    </properties>
+
+</project>

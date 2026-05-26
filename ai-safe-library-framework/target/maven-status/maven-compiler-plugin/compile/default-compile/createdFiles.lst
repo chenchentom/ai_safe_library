@@ -1,0 +1,10 @@
+com/aisafe/framework/handler/GlobalExceptionHandler.class
+com/aisafe/framework/config/RedisConfig.class
+com/aisafe/framework/config/ElasticsearchConfig$1.class
+com/aisafe/framework/config/EntityMetaObjectHandler.class
+com/aisafe/framework/security/WebMvcConfig.class
+com/aisafe/framework/config/ElasticsearchConfig.class
+com/aisafe/framework/aspect/LogAspect.class
+com/aisafe/framework/config/MyBatisPlusConfig.class
+com/aisafe/framework/security/StpInterfaceImpl.class
+com/aisafe/framework/security/SaTokenConfig.class

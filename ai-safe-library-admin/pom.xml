@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aisafe</groupId>
+        <artifactId>ai-safe-library</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ai-safe-library-admin</artifactId>
+    <name>启动模块</name>
+    <description>Spring Boot 入口 + 全局配置文件 + profile 管理</description>
+
+    <!--
+        启动模块的职责：
+        1. 通过依赖引入所有子模块，Spring Boot 自动扫描
+        2. 管理 application.yml 等配置文件
+        3. 包含 Maven Spring Boot 插件用于打包可执行 JAR
+    -->
+    <dependencies>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- system 模块：用户/部门/权限/标签 -->
+        <dependency>
+            <groupId>com.aisafe</groupId>
+            <artifactId>ai-safe-library-system</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- business 模块：风险线索/安全事件/风险报送 -->
+        <dependency>
+            <groupId>com.aisafe</groupId>
+            <artifactId>ai-safe-library-business</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Spring Boot Maven 插件：打包可执行 JAR -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

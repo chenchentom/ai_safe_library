@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aisafe</groupId>
+        <artifactId>ai-safe-library</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ai-safe-library-common</artifactId>
+    <name>公共模块</name>
+    <description>通用模型、工具类、异常定义、统一响应封装</description>
+
+    <!--
+        公共模块零外部依赖，保持纯净。
+        只引入必要的工具库，避免污染子模块。
+    -->
+    <dependencies>
+        <!-- Spring Boot Starter Web (提供 Jackson、Validation 等基础能力) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Hutool 通用工具库 — 字符串/日期/集合/IO 等 -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>${hutool.version}</version>
+        </dependency>
+
+        <!-- MyBatis Plus 注解 (仅注解，不含完整 starter) -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-annotation</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+
+    </dependencies>
+
+</project>

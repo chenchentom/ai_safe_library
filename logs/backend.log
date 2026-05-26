@@ -1,0 +1,133 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-05-26T15:27:46.268+08:00  INFO 22996 --- [           main] com.aisafe.AiSafeApplication             : Starting AiSafeApplication v1.0.0-SNAPSHOT using Java 17.0.19 with PID 22996 (/Volumes/mac/code/java/ai_safe_library/ai-safe-library-admin/target/ai-safe-library-admin-1.0.0-SNAPSHOT.jar started by tom in /Volumes/mac/code/java/ai_safe_library)
+2026-05-26T15:27:46.270+08:00 DEBUG 22996 --- [           main] com.aisafe.AiSafeApplication             : Running with Spring Boot v3.2.5, Spring v6.1.6
+2026-05-26T15:27:46.270+08:00  INFO 22996 --- [           main] com.aisafe.AiSafeApplication             : The following 1 profile is active: "dev"
+2026-05-26T15:27:46.622+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-26T15:27:46.622+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Elasticsearch repositories in DEFAULT mode.
+2026-05-26T15:27:46.680+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 56 ms. Found 2 Elasticsearch repository interfaces.
+2026-05-26T15:27:46.813+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-26T15:27:46.814+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Reactive Elasticsearch repositories in DEFAULT mode.
+2026-05-26T15:27:46.819+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 5 ms. Found 0 Reactive Elasticsearch repository interfaces.
+2026-05-26T15:27:46.823+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-26T15:27:46.824+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-05-26T15:27:46.830+08:00  INFO 22996 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.aisafe.business.repository.BizRiskClueRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-26T15:27:46.831+08:00  INFO 22996 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.aisafe.business.repository.BizRiskReviewRecordRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-26T15:27:46.831+08:00  INFO 22996 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 3 ms. Found 0 Redis repository interfaces.
+2026-05-26T15:27:47.197+08:00  INFO 22996 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-05-26T15:27:47.203+08:00  INFO 22996 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-05-26T15:27:47.203+08:00  INFO 22996 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-05-26T15:27:47.217+08:00  INFO 22996 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/api]    : Initializing Spring embedded WebApplicationContext
+2026-05-26T15:27:47.218+08:00  INFO 22996 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 914 ms
+Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
+Initialization Sequence datacenterId:9 workerId:29
+ _ _   |_  _ _|_. ___ _ |    _ 
+| | |\/|_)(_| | |_\  |_)||_|_\ 
+     /               |         
+                        3.5.5 
+____ ____    ___ ____ _  _ ____ _  _ 
+[__  |__| __  |  |  | |_/  |___ |\ | 
+___] |  |     |  |__| | \_ |___ | \| 
+https://sa-token.cc (v1.38.0)
+2026-05-26T15:27:48.572+08:00  INFO 22996 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+Can not find table primary key in Class: "com.aisafe.system.entity.SysRoleMenu".
+2026-05-26T15:27:48.591+08:00  WARN 22996 --- [           main] c.b.m.core.injector.DefaultSqlInjector   : class com.aisafe.system.entity.SysRoleMenu ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+Can not find table primary key in Class: "com.aisafe.system.entity.SysUserPost".
+2026-05-26T15:27:48.616+08:00  WARN 22996 --- [           main] c.b.m.core.injector.DefaultSqlInjector   : class com.aisafe.system.entity.SysUserPost ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+Can not find table primary key in Class: "com.aisafe.system.entity.SysUserRole".
+2026-05-26T15:27:48.649+08:00  WARN 22996 --- [           main] c.b.m.core.injector.DefaultSqlInjector   : class com.aisafe.system.entity.SysUserRole ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+2026-05-26T15:27:48.672+08:00  INFO 22996 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/api'
+2026-05-26T15:27:48.683+08:00  INFO 22996 --- [           main] com.aisafe.AiSafeApplication             : Started AiSafeApplication in 2.577 seconds (process running for 2.76)
+
+╔══════════════════════════════════════════╗
+║     AI安全事件库 v1.0.0 启动成功          ║
+║     访问: http://localhost:8080           ║
+╚══════════════════════════════════════════╝
+
+2026-05-26T15:28:00.961+08:00  INFO 22996 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/api]    : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-26T15:28:00.961+08:00  INFO 22996 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-26T15:28:00.962+08:00  INFO 22996 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-05-26T15:28:00.987+08:00  INFO 22996 --- [nio-8080-exec-1] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-26T15:28:01.051+08:00  INFO 22996 --- [nio-8080-exec-1] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@1b0ccb80
+2026-05-26T15:28:01.052+08:00  INFO 22996 --- [nio-8080-exec-1] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@32e42260] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1371107751 wrapping com.mysql.cj.jdbc.ConnectionImpl@1b0ccb80] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,nickname,email,phone,avatar,status,dept_id,remark,create_by,create_time,update_by,update_time,del_flag FROM sys_user WHERE del_flag='0' AND (username = ?)
+==> Parameters: admin(String)
+<==    Columns: id, username, password, nickname, email, phone, avatar, status, dept_id, remark, create_by, create_time, update_by, update_time, del_flag
+<==        Row: 1, admin, $2y$10$URfDzr.Y0ua4KnmwPBLiTOY73eqqlaKgXXNn9X5Uu2g2O2q5SBHKm, 超级管理员, admin@aisafe.local, 13800000001, null, 0, 1, 系统内置管理员, admin, 2026-05-19 15:43:39, null, 2026-05-19 18:13:53, 0
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@32e42260]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56e4f5a7] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@726179981 wrapping com.mysql.cj.jdbc.ConnectionImpl@1b0ccb80] will not be managed by Spring
+==>  Preparing: SELECT id,username,password,nickname,email,phone,avatar,status,dept_id,remark,create_by,create_time,update_by,update_time,del_flag FROM sys_user WHERE id=? AND del_flag='0'
+==> Parameters: 1(Long)
+<==    Columns: id, username, password, nickname, email, phone, avatar, status, dept_id, remark, create_by, create_time, update_by, update_time, del_flag
+<==        Row: 1, admin, $2y$10$URfDzr.Y0ua4KnmwPBLiTOY73eqqlaKgXXNn9X5Uu2g2O2q5SBHKm, 超级管理员, admin@aisafe.local, 13800000001, null, 0, 1, 系统内置管理员, admin, 2026-05-19 15:43:39, null, 2026-05-19 18:13:53, 0
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@56e4f5a7]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4a203488] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@918777132 wrapping com.mysql.cj.jdbc.ConnectionImpl@1b0ccb80] will not be managed by Spring
+==>  Preparing: SELECT id,parent_id,module,tag_name,tag_code,tag_level,tag_path,description,parent_name,icon,sort_order,status,create_by,create_time,update_by,update_time,del_flag FROM biz_supply_chain_tag_v2 WHERE del_flag='0' ORDER BY tag_level ASC,sort_order ASC
+==> Parameters: 
+<==    Columns: id, parent_id, module, tag_name, tag_code, tag_level, tag_path, description, parent_name, icon, sort_order, status, create_by, create_time, update_by, update_time, del_flag
+<==        Row: 1, 0, supply_chain_v2, 数据采集, SC-01, 0, /1, <<BLOB>>, , Folder, 1, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 2, 0, supply_chain_v2, 数据清洗与处理, SC-02, 0, /2, <<BLOB>>, , Folder, 2, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 3, 0, supply_chain_v2, 模型预训练, SC-03, 0, /3, <<BLOB>>, , Folder, 3, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 4, 0, supply_chain_v2, 监督微调(SFT), SC-04, 0, /4, <<BLOB>>, , Folder, 4, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 5, 0, supply_chain_v2, 强化学习(RL), SC-05, 0, /5, <<BLOB>>, , Folder, 5, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 6, 0, supply_chain_v2, 推理部署, SC-06, 0, /6, <<BLOB>>, , Folder, 6, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 7, 0, supply_chain_v2, Agent与应用层, SC-07, 0, /7, <<BLOB>>, , Folder, 7, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 8, 0, supply_chain_v2, 评估与可观测性, SC-08, 0, /8, <<BLOB>>, , Folder, 8, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 9, 0, supply_chain_v2, LLMOps/MLOps, SC-09, 0, /9, <<BLOB>>, , Folder, 9, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 10, 0, supply_chain_v2, 红黑对抗, SC-10, 0, /10, <<BLOB>>, , Folder, 10, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 11, 1, supply_chain_v2, 网页抓取/爬虫, SC-01-01, 1, /1/11, <<BLOB>>, 数据采集, PriceTag, 1, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 12, 1, supply_chain_v2, 合成数据生成, SC-01-02, 1, /1/12, <<BLOB>>, 数据采集, PriceTag, 2, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 13, 1, supply_chain_v2, 数据采集平台, SC-01-03, 1, /1/13, <<BLOB>>, 数据采集, PriceTag, 3, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 14, 2, supply_chain_v2, 文本清洗工具, SC-02-04, 1, /2/14, <<BLOB>>, 数据清洗与处理, PriceTag, 4, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 15, 2, supply_chain_v2, 去重与质量过滤, SC-02-05, 1, /2/15, <<BLOB>>, 数据清洗与处理, PriceTag, 5, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 16, 2, supply_chain_v2, 数据格式与存储, SC-02-06, 1, /2/16, <<BLOB>>, 数据清洗与处理, PriceTag, 6, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 17, 2, supply_chain_v2, 数据处理框架, SC-02-07, 1, /2/17, <<BLOB>>, 数据清洗与处理, PriceTag, 7, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 18, 3, supply_chain_v2, 预训练框架, SC-03-08, 1, /3/18, <<BLOB>>, 模型预训练, PriceTag, 8, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 19, 3, supply_chain_v2, 继续预训练(CPT), SC-03-09, 1, /3/19, <<BLOB>>, 模型预训练, PriceTag, 9, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 20, 3, supply_chain_v2, 训练基础设施, SC-03-10, 1, /3/20, <<BLOB>>, 模型预训练, PriceTag, 10, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 21, 4, supply_chain_v2, 高效微调框架, SC-04-11, 1, /4/21, <<BLOB>>, 监督微调(SFT), PriceTag, 11, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 22, 4, supply_chain_v2, 微调技术, SC-04-12, 1, /4/22, <<BLOB>>, 监督微调(SFT), PriceTag, 12, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 23, 4, supply_chain_v2, SFT数据工程, SC-04-13, 1, /4/23, <<BLOB>>, 监督微调(SFT), PriceTag, 13, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 24, 5, supply_chain_v2, RLHF管道, SC-05-14, 1, /5/24, <<BLOB>>, 强化学习(RL), PriceTag, 14, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 25, 5, supply_chain_v2, 偏好优化方法, SC-05-15, 1, /5/25, <<BLOB>>, 强化学习(RL), PriceTag, 15, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 26, 5, supply_chain_v2, RLVR, SC-05-16, 1, /5/26, <<BLOB>>, 强化学习(RL), PriceTag, 16, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 27, 5, supply_chain_v2, 对齐评估, SC-05-17, 1, /5/27, <<BLOB>>, 强化学习(RL), PriceTag, 17, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 28, 6, supply_chain_v2, 推理引擎, SC-06-18, 1, /6/28, <<BLOB>>, 推理部署, PriceTag, 18, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 29, 6, supply_chain_v2, 模型量化, SC-06-19, 1, /6/29, <<BLOB>>, 推理部署, PriceTag, 19, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 30, 6, supply_chain_v2, 服务编排与网关, SC-06-20, 1, /6/30, <<BLOB>>, 推理部署, PriceTag, 20, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 31, 6, supply_chain_v2, 端侧/边缘推理, SC-06-21, 1, /6/31, <<BLOB>>, 推理部署, PriceTag, 21, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 32, 6, supply_chain_v2, 推理服务器, SC-06-22, 1, /6/32, <<BLOB>>, 推理部署, PriceTag, 22, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 33, 7, supply_chain_v2, Agent框架, SC-07-23, 1, /7/33, <<BLOB>>, Agent与应用层, PriceTag, 23, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 34, 7, supply_chain_v2, MCP协议, SC-07-24, 1, /7/34, <<BLOB>>, Agent与应用层, PriceTag, 24, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 35, 7, supply_chain_v2, Skills/插件生态, SC-07-25, 1, /7/35, <<BLOB>>, Agent与应用层, PriceTag, 25, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 36, 7, supply_chain_v2, RAG技术栈, SC-07-26, 1, /7/36, <<BLOB>>, Agent与应用层, PriceTag, 26, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 37, 7, supply_chain_v2, 应用开发平台, SC-07-27, 1, /7/37, <<BLOB>>, Agent与应用层, PriceTag, 27, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 38, 8, supply_chain_v2, 模型评估, SC-08-28, 1, /8/38, <<BLOB>>, 评估与可观测性, PriceTag, 28, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 39, 8, supply_chain_v2, Agent评估, SC-08-29, 1, /8/39, <<BLOB>>, 评估与可观测性, PriceTag, 29, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 40, 8, supply_chain_v2, 可观测性, SC-08-30, 1, /8/40, <<BLOB>>, 评估与可观测性, PriceTag, 30, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 41, 8, supply_chain_v2, 安全评估, SC-08-31, 1, /8/41, <<BLOB>>, 评估与可观测性, PriceTag, 31, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 42, 9, supply_chain_v2, 实验管理, SC-09-32, 1, /9/42, <<BLOB>>, LLMOps/MLOps, PriceTag, 32, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 43, 9, supply_chain_v2, 模型注册与版本, SC-09-33, 1, /9/43, <<BLOB>>, LLMOps/MLOps, PriceTag, 33, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 44, 9, supply_chain_v2, CI/CD for ML, SC-09-34, 1, /9/44, <<BLOB>>, LLMOps/MLOps, PriceTag, 34, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 45, 9, supply_chain_v2, 数据版本管理, SC-09-35, 1, /9/45, <<BLOB>>, LLMOps/MLOps, PriceTag, 35, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 46, 10, supply_chain_v2, 攻击技术, SC-10-36, 1, /10/46, <<BLOB>>, 红黑对抗, PriceTag, 36, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 47, 10, supply_chain_v2, 防御技术, SC-10-37, 1, /10/47, <<BLOB>>, 红黑对抗, PriceTag, 37, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==        Row: 48, 10, supply_chain_v2, 威胁情报, SC-10-38, 1, /10/48, <<BLOB>>, 红黑对抗, PriceTag, 38, 0, , 2026-05-21 19:08:13, , 2026-05-21 19:08:13, 0
+<==      Total: 48
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4a203488]
