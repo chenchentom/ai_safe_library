@@ -218,13 +218,13 @@ public class RiskClueController {
         long total = riskClueService.countAll();
         long pending = riskClueService.countByReviewStatus(10);
         long reviewed = riskClueService.countByReviewStatus(20);
-        long rejected = riskClueService.countByReviewStatus(40);
+        long warehoused = riskClueService.countWarehoused();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("total", total);
         stats.put("pending", pending);
         stats.put("reviewed", reviewed);
-        stats.put("rejected", rejected);
+        stats.put("warehoused", warehoused);
         return R.ok(stats);
     }
 

@@ -59,7 +59,7 @@ public class RiskClueServiceImpl implements RiskClueService {
             }
 
             if (searchQuery.getIsWarehouse() != null) {
-                b.filter(f -> f.term(t -> t.field("is_warehouse").value(searchQuery.getIsWarehouse())));
+                addWarehouseFilter(b, searchQuery.getIsWarehouse());
             }
 
             addRiskCategoryFilter(b, searchQuery.getAuditRiskCategory(), "class_human_1", "class_human_2", "class_human_list");
@@ -262,13 +262,32 @@ public class RiskClueServiceImpl implements RiskClueService {
 
     @Override
     public long countWarehoused() {
-        NativeQuery countQuery = NativeQuery.builder()
-                .withQuery(q -> q.bool(b -> b
-                        .filter(f -> f.term(t -> t.field("audit_status").value(20)))
-                        .filter(f -> f.term(t -> t.field("is_warehouse").value(1)))))
-                .withMaxResults(1)
-                .build();
-        SearchHits<BizRiskClue> hits = elasticsearchOperations.search(countQuery, BizRiskClue.class);
-        return hits.getTotalHits();
+        RiskClueSearchQuery query = new RiskClueSearchQuery();
+        query.setReviewStatus(20);
+        query.setIsWarehouse(1);
+        query.setPage(1);
+        query.setSize(1);
+        Object total = search(query).get("total");
+        if (total instanceof Number) {
+            return ((Number) total).longValue();
+        }
+        return 0L;
+    }
+
+    /**
+     * 入库状态筛选：兼容 is_warehouse / isWarehouse 及历史数据类型差异
+     */
+    private void addWarehouseFilter(BoolQuery.Builder b, int isWarehouse) {
+        if (isWarehouse == 1) {
+            b.filter(f -> f.bool(bb -> bb
+                    .should(s -> s.term(t -> t.field("is_warehouse").value(1)))
+                    .should(s -> s.term(t -> t.field("isWarehouse").value(1)))
+                    .minimumShouldMatch("1")));
+        } else {
+            b.filter(f -> f.bool(bb -> bb
+                    .should(s -> s.term(t -> t.field("is_warehouse").value(0)))
+                    .should(s -> s.term(t -> t.field("isWarehouse").value(0)))
+                    .minimumShouldMatch("1")));
+        }
     }
 }
