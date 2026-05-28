@@ -81,6 +81,11 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         record.setReviewDept(deptName);
         record.setReviewTime(auditTime);
         record.setReviewResult("reviewed");
+        if (normalizeWarehouse(dto.getIsWarehouse()) == 1) {
+            record.setWarehouseTime(auditTime);
+        } else {
+            record.setWarehouseTime(null);
+        }
 
         updateClueAfterReview(dto.getClueId(), dto, reviewerName, deptName, auditTime);
         saveReviewRecord(record);
@@ -111,7 +116,9 @@ public class RiskReviewServiceImpl implements RiskReviewService {
 
         Document doc = Document.create();
         doc.put("audit_status", 20);
-        doc.put("is_warehouse", normalizeWarehouse(dto.getIsWarehouse()));
+        int isWarehouse = normalizeWarehouse(dto.getIsWarehouse());
+        doc.put("is_warehouse", isWarehouse);
+        applyWarehouseTime(doc, isWarehouse, auditTime);
         applyHumanCategory(doc, dto.getRiskCategory());
         putIfHasText(doc, "risk_description_human", dto.getRiskDescriptionHuman());
         putIfHasText(doc, "operating_entity_human", dto.getOperatingEntityHuman());
@@ -145,6 +152,11 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         putIfHasText(doc, "reviewer_name", record.getReviewerName());
         putIfHasText(doc, "review_dept", record.getReviewDept());
         doc.put("review_time", record.getReviewTime().format(ES_DATE_TIME));
+        if (record.getIsWarehouse() != null && record.getIsWarehouse() == 1 && record.getWarehouseTime() != null) {
+            doc.put("warehouse_time", record.getWarehouseTime().format(ES_DATE_TIME));
+        } else {
+            doc.put("warehouse_time", null);
+        }
 
         String recordId = UUID.randomUUID().toString();
         UpdateQuery indexQuery = UpdateQuery.builder(recordId)
@@ -197,6 +209,15 @@ public class RiskReviewServiceImpl implements RiskReviewService {
     private void putIfHasText(Document doc, String field, String value) {
         if (hasText(value)) {
             doc.put(field, value.trim());
+        }
+    }
+
+    /** 入库时写入入库时间，未入库时清空该字段 */
+    private void applyWarehouseTime(Document doc, int isWarehouse, LocalDateTime warehouseTime) {
+        if (isWarehouse == 1) {
+            doc.put("warehouse_time", warehouseTime.format(ES_DATE_TIME));
+        } else {
+            doc.put("warehouse_time", null);
         }
     }
 

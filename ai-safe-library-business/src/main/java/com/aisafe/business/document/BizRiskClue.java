@@ -92,6 +92,10 @@ public class BizRiskClue {
     @Field(name = "is_warehouse", type = FieldType.Integer)
     private Integer isWarehouse;
 
+    @Field(name = "warehouse_time", type = FieldType.Date, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private LocalDateTime warehouseTime;
+
     @Field(name = "audit_reason", type = FieldType.Text, analyzer = "standard")
     private String auditReason;
 
@@ -197,6 +201,9 @@ public class BizRiskClue {
 
     public Integer getIsWarehouse() { return isWarehouse; }
     public void setIsWarehouse(Integer isWarehouse) { this.isWarehouse = isWarehouse; }
+
+    public LocalDateTime getWarehouseTime() { return warehouseTime; }
+    public void setWarehouseTime(LocalDateTime warehouseTime) { this.warehouseTime = warehouseTime; }
 
     public String getAuditReason() { return auditReason; }
     public void setAuditReason(String auditReason) { this.auditReason = auditReason; }

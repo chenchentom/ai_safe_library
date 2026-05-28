@@ -46,6 +46,10 @@ INDEX_BODY = {
                 "type": "date",
                 "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss||epoch_millis",
             },
+            "warehouse_time": {
+                "type": "date",
+                "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss||epoch_millis",
+            },
         }
     },
 }

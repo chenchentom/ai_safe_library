@@ -3,7 +3,9 @@ package com.aisafe.business.controller;
 import com.aisafe.business.document.BizRiskClue;
 import com.aisafe.business.document.BizRiskReviewRecord;
 import com.aisafe.business.dto.ReviewDTO;
+import com.aisafe.business.dto.RiskClueManualCreateDTO;
 import com.aisafe.business.dto.RiskClueSearchQuery;
+import com.aisafe.business.service.RiskClueManualService;
 import com.aisafe.business.service.RiskClueService;
 import com.aisafe.business.service.RiskReviewService;
 import com.aisafe.common.result.R;
@@ -26,11 +28,14 @@ public class RiskClueController {
 
     private final RiskClueService riskClueService;
     private final RiskReviewService riskReviewService;
+    private final RiskClueManualService riskClueManualService;
 
     public RiskClueController(RiskClueService riskClueService,
-                              RiskReviewService riskReviewService) {
+                              RiskReviewService riskReviewService,
+                              RiskClueManualService riskClueManualService) {
         this.riskClueService = riskClueService;
         this.riskReviewService = riskReviewService;
+        this.riskClueManualService = riskClueManualService;
     }
 
     /**
@@ -190,6 +195,15 @@ public class RiskClueController {
     public R<String> save(@RequestBody BizRiskClue clue) {
         String id = riskClueService.save(clue);
         return R.ok(id);
+    }
+
+    /**
+     * 手动新增风险线索（待审核）
+     */
+    @PostMapping
+    public R<Map<String, String>> create(@RequestBody RiskClueManualCreateDTO dto) {
+        String id = riskClueManualService.createClue(dto);
+        return R.ok(Map.of("id", id));
     }
 
     @GetMapping("/{id}")

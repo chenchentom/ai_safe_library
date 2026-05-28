@@ -1,7 +1,9 @@
 package com.aisafe.business.controller;
 
 import com.aisafe.business.document.BizRiskClue;
+import com.aisafe.business.dto.RiskClueManualCreateDTO;
 import com.aisafe.business.dto.RiskClueSearchQuery;
+import com.aisafe.business.service.RiskClueManualService;
 import com.aisafe.business.service.RiskClueService;
 import com.aisafe.common.result.R;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +18,12 @@ import java.util.Map;
 public class SecurityEventController {
 
     private final RiskClueService riskClueService;
+    private final RiskClueManualService riskClueManualService;
 
-    public SecurityEventController(RiskClueService riskClueService) {
+    public SecurityEventController(RiskClueService riskClueService,
+                                   RiskClueManualService riskClueManualService) {
         this.riskClueService = riskClueService;
+        this.riskClueManualService = riskClueManualService;
     }
 
     @GetMapping("/search")
@@ -76,6 +81,15 @@ public class SecurityEventController {
     @GetMapping("/stats")
     public R<Map<String, Object>> stats() {
         return R.ok(Map.of("total", riskClueService.countWarehoused()));
+    }
+
+    /**
+     * 手动新增安全事件（创建线索并自动审核入库）
+     */
+    @PostMapping
+    public R<Map<String, String>> create(@RequestBody RiskClueManualCreateDTO dto) {
+        String id = riskClueManualService.createEvent(dto);
+        return R.ok(Map.of("id", id));
     }
 
     private RiskClueSearchQuery buildEventQuery(

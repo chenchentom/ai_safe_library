@@ -62,6 +62,10 @@ public class BizRiskReviewRecord {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime reviewTime;
 
+    @Field(name = "warehouse_time", type = FieldType.Date, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private LocalDateTime warehouseTime;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -110,4 +114,7 @@ public class BizRiskReviewRecord {
 
     public LocalDateTime getReviewTime() { return reviewTime; }
     public void setReviewTime(LocalDateTime reviewTime) { this.reviewTime = reviewTime; }
+
+    public LocalDateTime getWarehouseTime() { return warehouseTime; }
+    public void setWarehouseTime(LocalDateTime warehouseTime) { this.warehouseTime = warehouseTime; }
 }
