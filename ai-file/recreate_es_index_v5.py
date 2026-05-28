@@ -116,6 +116,10 @@ INDEX_SETTINGS = {
             "is_warehouse": {
                 "type": "integer"
             },
+            "warehouse_time": {
+                "type": "date",
+                "format": "yyyy-MM-dd HH:mm:ss"
+            },
             "audit_reason": {
                 "type": "text",
                 "analyzer": "standard"

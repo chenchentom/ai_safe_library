@@ -11,22 +11,28 @@ import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.stereotype.Service;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * 风险线索 Service 实现
  */
 @Service
 public class RiskClueServiceImpl implements RiskClueService {
+
+    private static final DateTimeFormatter ES_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final BizRiskClueRepository bizRiskClueRepository;
     private final ElasticsearchOperations elasticsearchOperations;
@@ -214,30 +220,114 @@ public class RiskClueServiceImpl implements RiskClueService {
 
     @Override
     public String save(BizRiskClue clue) {
-        if (clue.getCreatedTime() == null) {
-            clue.setCreatedTime(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        if (clue.getCreateTime() == null) {
+            clue.setCreateTime(now);
         }
-        if (clue.getUpdatedTime() == null) {
-            clue.setUpdatedTime(LocalDateTime.now());
+        if (clue.getUpdateTime() == null) {
+            clue.setUpdateTime(now);
         }
-        BizRiskClue saved = bizRiskClueRepository.save(clue);
-        return saved.getId();
+        String id = clue.getId();
+        if (!hasText(id)) {
+            id = UUID.randomUUID().toString();
+            clue.setId(id);
+        }
+        Document doc = buildClueDocument(clue);
+        UpdateQuery updateQuery = UpdateQuery.builder(id)
+                .withDocument(doc)
+                .withUpsert(doc)
+                .build();
+        elasticsearchOperations.update(updateQuery, elasticsearchOperations.getIndexCoordinatesFor(BizRiskClue.class));
+        return id;
     }
 
     @Override
     public void updateStatus(String id, Integer reviewStatus) {
-        Optional<BizRiskClue> optional = bizRiskClueRepository.findById(id);
-        if (optional.isPresent()) {
-            BizRiskClue clue = optional.get();
-            clue.setReviewStatus(reviewStatus);
-            clue.setUpdatedTime(LocalDateTime.now());
-            bizRiskClueRepository.save(clue);
+        if (!hasText(id)) {
+            return;
+        }
+        Document doc = Document.create();
+        doc.put("audit_status", reviewStatus);
+        doc.put("update_time", LocalDateTime.now().format(ES_DATE_TIME));
+        UpdateQuery updateQuery = UpdateQuery.builder(id)
+                .withDocument(doc)
+                .build();
+        elasticsearchOperations.update(updateQuery, elasticsearchOperations.getIndexCoordinatesFor(BizRiskClue.class));
+    }
+
+    private Document buildClueDocument(BizRiskClue clue) {
+        Document doc = Document.create();
+        if (clue.getNumber() != null) {
+            doc.put("number", clue.getNumber());
+        }
+        putIfHasText(doc, "event_name", clue.getEventName());
+        putIfHasText(doc, "class_report_1", clue.getClassReport1());
+        putIfHasText(doc, "class_report_2", clue.getClassReport2());
+        if (clue.getClassReportList() != null && !clue.getClassReportList().isEmpty()) {
+            doc.put("class_report_list", clue.getClassReportList());
+        }
+        putIfHasText(doc, "class_human_1", clue.getClassHuman1());
+        putIfHasText(doc, "class_human_2", clue.getClassHuman2());
+        if (clue.getClassHumanList() != null && !clue.getClassHumanList().isEmpty()) {
+            doc.put("class_human_list", clue.getClassHumanList());
+        }
+        putIfHasText(doc, "products_components_services", clue.getProductsComponentsServices());
+        putIfHasText(doc, "operating_entity", clue.getOperatingEntity());
+        putIfHasText(doc, "operating_entity_human", clue.getOperatingEntityHuman());
+        putIfHasText(doc, "risk_description", clue.getRiskDescription());
+        putIfHasText(doc, "risk_description_human", clue.getRiskDescriptionHuman());
+        putIfHasText(doc, "source_url", clue.getSourceUrl());
+        putIfHasText(doc, "source_website", clue.getSourceWebsite());
+        putIfHasText(doc, "paper_title", clue.getPaperTitle());
+        putIfHasText(doc, "research_team", clue.getResearchTeam());
+        putIfHasText(doc, "content", clue.getContent());
+        putIfHasText(doc, "submit_user_name", clue.getSubmitUserName());
+        putIfHasText(doc, "submission_channel", clue.getSubmissionChannel());
+        putDateTime(doc, "submission_time", clue.getSubmissionTime());
+        putIfHasText(doc, "submit_org_name", clue.getSubmitOrgName());
+        if (clue.getIsSubmit() != null) {
+            doc.put("is_submit", clue.getIsSubmit());
+        }
+        if (clue.getAuditStatus() != null) {
+            doc.put("audit_status", clue.getAuditStatus());
+        }
+        if (clue.getIsWarehouse() != null) {
+            doc.put("is_warehouse", clue.getIsWarehouse());
+        }
+        putDateTime(doc, "warehouse_time", clue.getWarehouseTime());
+        putIfHasText(doc, "audit_reason", clue.getAuditReason());
+        putIfHasText(doc, "audit_user_name", clue.getAuditUserName());
+        putIfHasText(doc, "audit_dept_name", clue.getAuditDeptName());
+        putDateTime(doc, "audit_time", clue.getAuditTime());
+        putDateTime(doc, "create_time", clue.getCreateTime());
+        putDateTime(doc, "update_time", clue.getUpdateTime());
+        if (clue.getDeleted() != null) {
+            doc.put("deleted", clue.getDeleted());
+        }
+        if (clue.getIsVerify() != null) {
+            doc.put("is_verify", clue.getIsVerify());
+        }
+        return doc;
+    }
+
+    private void putIfHasText(Document doc, String field, String value) {
+        if (hasText(value)) {
+            doc.put(field, value.trim());
+        }
+    }
+
+    private void putDateTime(Document doc, String field, LocalDateTime value) {
+        if (value != null) {
+            doc.put(field, value.format(ES_DATE_TIME));
         }
     }
 
     @Override
     public void deleteById(String id) {
-        bizRiskClueRepository.deleteById(id);
+        if (!hasText(id)) {
+            return;
+        }
+        bizRiskClueRepository.deleteById(id.trim());
     }
 
     @Override
