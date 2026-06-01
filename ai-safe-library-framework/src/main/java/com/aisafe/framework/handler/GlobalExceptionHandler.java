@@ -3,9 +3,11 @@ package com.aisafe.framework.handler;
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
 import com.aisafe.common.exception.BusinessException;
+import com.aisafe.common.exception.BusinessException;
 import com.aisafe.common.result.R;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +32,24 @@ public class GlobalExceptionHandler {
     public R<Void> handleBusinessException(BusinessException e) {
         log.warn("业务异常: {}", e.getMessage());
         return R.fail(e.getCode(), e.getMessage());
+    }
+
+    /** 参数/业务校验（如 IllegalArgumentException） */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public R<Void> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("参数校验失败: {}", e.getMessage());
+        return R.fail(400, e.getMessage());
+    }
+
+    /** 唯一键冲突 */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public R<Void> handleDuplicateKeyException(DuplicateKeyException e) {
+        log.warn("数据重复: {}", e.getMessage());
+        String message = e.getMessage();
+        if (message != null && message.contains("uk_tag_code")) {
+            return R.fail(400, "标签编码已存在，请更换编码后重试");
+        }
+        return R.fail(400, "数据已存在，请勿重复提交");
     }
 
     /** 未登录 */

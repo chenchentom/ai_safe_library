@@ -53,3 +53,9 @@ sa-token:
   is-read-header: true
   # JWT 密钥 (生产环境务必更换为复杂随机字符串)
   jwt-secret-key: AiSafeLibrary2026SecretKeyForJWT
+
+# ---- 平台文件路径（各环境 profile 可覆盖） ----
+aisafe:
+  file:
+    base-dir: /data/ai-safe/files
+    risk-report-template-path: /data/ai-safe/templates/数据模版.xlsx

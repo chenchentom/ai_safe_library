@@ -3,6 +3,8 @@ package com.aisafe.system.entity;
 import com.aisafe.common.model.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 分类标签实体 — 支持无限层级树结构
@@ -12,9 +14,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 public class BizTagCategory extends BaseEntity {
 
     @TableId
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /** 父节点ID，0=根节点 */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
 
     /** 所属模块：risk_clue / malicious_skill / supply_chain */

@@ -30,6 +30,11 @@ public class SupplyChainTagV2ServiceImpl extends ServiceImpl<BizSupplyChainTagV2
     @Override
     @Transactional
     public BizSupplyChainTagV2 add(BizSupplyChainTagV2 entity) {
+        if (StrUtil.isBlank(entity.getTagCode())) {
+            throw new IllegalArgumentException("标签编码不能为空");
+        }
+        entity.setTagCode(entity.getTagCode().trim());
+
         if (entity.getParentId() == null) {
             entity.setParentId(0L);
         }
@@ -47,6 +52,9 @@ public class SupplyChainTagV2ServiceImpl extends ServiceImpl<BizSupplyChainTagV2
             entity.setModule(parent.getModule());
             entity.setTagLevel(parent.getTagLevel() + 1);
         }
+
+        assertTagCodeAvailable(entity.getModule(), entity.getTagCode());
+        baseMapper.physicalDeleteSoftDeletedByCode(entity.getModule(), entity.getTagCode());
 
         if (entity.getSortOrder() == null) entity.setSortOrder(0);
         if (StrUtil.isBlank(entity.getStatus())) entity.setStatus("0");
@@ -121,5 +129,14 @@ public class SupplyChainTagV2ServiceImpl extends ServiceImpl<BizSupplyChainTagV2
         }
         node.setSortOrder(newSortOrder);
         baseMapper.updateById(node);
+    }
+
+    private void assertTagCodeAvailable(String module, String tagCode) {
+        LambdaQueryWrapper<BizSupplyChainTagV2> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizSupplyChainTagV2::getModule, module)
+               .eq(BizSupplyChainTagV2::getTagCode, tagCode);
+        if (baseMapper.selectCount(wrapper) > 0) {
+            throw new IllegalArgumentException("标签编码已存在: " + tagCode);
+        }
     }
 }

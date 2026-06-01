@@ -16,4 +16,14 @@ public interface RiskClueManualService {
      * 新增并直接入库为安全事件（先创建线索，再自动审核入库）
      */
     String createEvent(RiskClueManualCreateDTO dto);
+
+    /**
+     * 根据报送人昵称（或用户名）解析报送部门名称
+     */
+    String resolveSubmitOrgName(String submitUserName);
+
+    /**
+     * 编辑本部门待审核报送的基础信息
+     */
+    void updatePendingReport(String id, RiskClueManualCreateDTO dto, String reportUnit);
 }

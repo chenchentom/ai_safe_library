@@ -2,9 +2,12 @@ package com.aisafe.business.service.impl;
 
 import com.aisafe.business.document.BizRiskClue;
 import com.aisafe.business.document.BizRiskReviewRecord;
+import com.aisafe.business.dto.BatchReviewResult;
 import com.aisafe.business.dto.ReviewDTO;
+import com.aisafe.business.dto.RiskClueSearchQuery;
 import com.aisafe.business.repository.BizRiskClueRepository;
 import com.aisafe.business.repository.BizRiskReviewRecordRepository;
+import com.aisafe.business.service.RiskClueService;
 import com.aisafe.business.service.RiskReviewService;
 import com.aisafe.common.exception.BusinessException;
 import com.aisafe.system.entity.SysDept;
@@ -25,7 +28,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,22 +44,28 @@ public class RiskReviewServiceImpl implements RiskReviewService {
 
     private static final DateTimeFormatter ES_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    private static final int BATCH_REVIEW_PAGE_SIZE = 100;
+    private static final int MAX_FAILURE_DETAILS = 20;
+
     private final BizRiskClueRepository bizRiskClueRepository;
     private final BizRiskReviewRecordRepository bizRiskReviewRecordRepository;
     private final ElasticsearchOperations elasticsearchOperations;
     private final ISysUserService userService;
     private final ISysDeptService deptService;
+    private final RiskClueService riskClueService;
 
     public RiskReviewServiceImpl(BizRiskClueRepository bizRiskClueRepository,
                                  BizRiskReviewRecordRepository bizRiskReviewRecordRepository,
                                  ElasticsearchOperations elasticsearchOperations,
                                  ISysUserService userService,
-                                 ISysDeptService deptService) {
+                                 ISysDeptService deptService,
+                                 RiskClueService riskClueService) {
         this.bizRiskClueRepository = bizRiskClueRepository;
         this.bizRiskReviewRecordRepository = bizRiskReviewRecordRepository;
         this.elasticsearchOperations = elasticsearchOperations;
         this.userService = userService;
         this.deptService = deptService;
+        this.riskClueService = riskClueService;
     }
 
     @Override
@@ -90,6 +101,64 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         updateClueAfterReview(dto.getClueId(), dto, reviewerName, deptName, auditTime);
         saveReviewRecord(record);
         logger.info("审核完成 clueId={} reviewer={}", dto.getClueId(), reviewerName);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public BatchReviewResult batchReviewByQuery(RiskClueSearchQuery query, int batchIsWarehouse) {
+        RiskClueSearchQuery searchQuery = query != null ? query : new RiskClueSearchQuery();
+        searchQuery.setReviewStatus(10);
+        searchQuery.setPage(1);
+        searchQuery.setSize(BATCH_REVIEW_PAGE_SIZE);
+
+        int warehouseDecision = batchIsWarehouse != 0 ? 1 : 0;
+
+        Map<String, Object> firstPage = riskClueService.search(searchQuery);
+        long totalPending = firstPage.get("total") instanceof Number number ? number.longValue() : 0L;
+
+        BatchReviewResult result = new BatchReviewResult();
+        result.setTotal((int) Math.min(totalPending, Integer.MAX_VALUE));
+
+        if (totalPending <= 0) {
+            return result;
+        }
+
+        int success = 0;
+        int failed = 0;
+        List<BatchReviewResult.FailureItem> failures = new ArrayList<>();
+
+        while (true) {
+            Map<String, Object> pageResult = riskClueService.search(searchQuery);
+            List<BizRiskClue> rows = extractClueRows(pageResult);
+            if (rows.isEmpty()) {
+                break;
+            }
+
+            for (BizRiskClue clue : rows) {
+                ReviewDTO dto = buildAutoReviewFromClue(clue, warehouseDecision);
+                String validationError = validateAutoReview(dto);
+                if (validationError != null) {
+                    failed++;
+                    addFailure(failures, clue, validationError);
+                    continue;
+                }
+                try {
+                    review(dto);
+                    success++;
+                } catch (Exception ex) {
+                    failed++;
+                    String reason = ex.getMessage() != null ? ex.getMessage() : "审核失败";
+                    addFailure(failures, clue, reason);
+                    logger.warn("批量审核失败 clueId={} reason={}", clue.getId(), reason);
+                }
+            }
+        }
+
+        result.setSuccess(success);
+        result.setFailed(failed);
+        result.setFailures(failures);
+        logger.info("批量审核完成 total={} success={} failed={}", result.getTotal(), success, failed);
+        return result;
     }
 
     @Override
@@ -245,5 +314,80 @@ public class RiskReviewServiceImpl implements RiskReviewService {
             return null;
         }
         return value.trim();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<BizRiskClue> extractClueRows(Map<String, Object> pageResult) {
+        if (pageResult == null || pageResult.get("rows") == null) {
+            return List.of();
+        }
+        Object rows = pageResult.get("rows");
+        if (rows instanceof List<?> list) {
+            List<BizRiskClue> clues = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof BizRiskClue clue) {
+                    clues.add(clue);
+                }
+            }
+            return clues;
+        }
+        return List.of();
+    }
+
+    private ReviewDTO buildAutoReviewFromClue(BizRiskClue clue, int batchIsWarehouse) {
+        ReviewDTO dto = new ReviewDTO();
+        dto.setClueId(clue.getId());
+        dto.setIsWarehouse(batchIsWarehouse != 0 ? 1 : 0);
+        dto.setRiskCategory(resolveReportCategory(clue));
+        dto.setRiskDescriptionHuman(resolveRiskDescription(clue));
+        dto.setOperatingEntityHuman(trimToNull(clue.getOperatingEntity()));
+        return dto;
+    }
+
+    private String validateAutoReview(ReviewDTO dto) {
+        if (!hasText(dto.getRiskCategory())) {
+            return "缺少报送风险类别";
+        }
+        if (!hasText(dto.getRiskDescriptionHuman())) {
+            return "缺少报送风险描述";
+        }
+        return null;
+    }
+
+    private String resolveReportCategory(BizRiskClue clue) {
+        String level1 = trimToNull(clue.getClassReport1());
+        String level2 = trimToNull(clue.getClassReport2());
+        if (hasText(level1) && hasText(level2)) {
+            return level1 + "/" + level2;
+        }
+        if (hasText(level1)) {
+            return level1;
+        }
+        if (clue.getClassReportList() != null) {
+            for (String item : clue.getClassReportList()) {
+                if (hasText(item)) {
+                    return item.trim();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String resolveRiskDescription(BizRiskClue clue) {
+        if (hasText(clue.getRiskDescription())) {
+            return clue.getRiskDescription().trim();
+        }
+        if (hasText(clue.getContent())) {
+            return clue.getContent().trim();
+        }
+        return null;
+    }
+
+    private void addFailure(List<BatchReviewResult.FailureItem> failures, BizRiskClue clue, String reason) {
+        if (failures.size() >= MAX_FAILURE_DETAILS) {
+            return;
+        }
+        String eventName = hasText(clue.getEventName()) ? clue.getEventName().trim() : clue.getId();
+        failures.add(new BatchReviewResult.FailureItem(clue.getId(), eventName, reason));
     }
 }

@@ -134,9 +134,9 @@ public class TagCategoryController {
         // 第一遍：创建所有节点
         for (BizTagCategory entity : list) {
             Map<String, Object> node = new HashMap<>();
-            node.put("id", entity.getId());
+            node.put("id", String.valueOf(entity.getId()));
             node.put("label", entity.getTagName());
-            node.put("parentId", entity.getParentId());
+            node.put("parentId", entity.getParentId() == null ? "0" : String.valueOf(entity.getParentId()));
             node.put("tagCode", entity.getTagCode());
             node.put("tagLevel", entity.getTagLevel());
             node.put("tagPath", entity.getTagPath());

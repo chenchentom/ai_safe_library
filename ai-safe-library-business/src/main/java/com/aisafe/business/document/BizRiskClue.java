@@ -123,6 +123,14 @@ public class BizRiskClue {
     @Field(name = "is_verify", type = FieldType.Integer)
     private Integer isVerify;
 
+    /** 是否共享：1 已共享 0 未共享 */
+    @Field(name = "is_shared", type = FieldType.Integer)
+    private Integer isShared;
+
+    @Field(name = "share_time", type = FieldType.Date, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private LocalDateTime shareTime;
+
     // ==================== Getters and Setters ====================
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -228,6 +236,12 @@ public class BizRiskClue {
 
     public Integer getIsVerify() { return isVerify; }
     public void setIsVerify(Integer isVerify) { this.isVerify = isVerify; }
+
+    public Integer getIsShared() { return isShared; }
+    public void setIsShared(Integer isShared) { this.isShared = isShared; }
+
+    public LocalDateTime getShareTime() { return shareTime; }
+    public void setShareTime(LocalDateTime shareTime) { this.shareTime = shareTime; }
 
     // ==================== 旧字段别名方法（向后兼容） ====================
     public String getTitle() { return eventName; }

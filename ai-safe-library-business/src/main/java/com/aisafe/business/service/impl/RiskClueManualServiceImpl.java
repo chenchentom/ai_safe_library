@@ -77,7 +77,7 @@ public class RiskClueManualServiceImpl implements RiskClueManualService {
         clue.setSubmissionChannel(trimToNull(dto.getSubmissionChannel()));
         clue.setOperatingEntity(trimToNull(dto.getOperatingEntity()));
         clue.setProductsComponentsServices(trimToNull(dto.getProductsComponentsServices()));
-        applyAutoReportMeta(clue, user, now);
+        applyAutoReportMeta(clue, dto, user, now);
         clue.setDeleted(0);
         clue.setCreateTime(now);
         clue.setUpdateTime(now);
@@ -93,6 +93,8 @@ public class RiskClueManualServiceImpl implements RiskClueManualService {
         clue.setAuditTime(eventTime);
         clue.setWarehouseTime(eventTime);
         clue.setAuditReason(null);
+        clue.setIsShared(0);
+        clue.setShareTime(null);
     }
 
     /** 审核侧字段与报送侧保持一致 */
@@ -130,11 +132,85 @@ public class RiskClueManualServiceImpl implements RiskClueManualService {
         clue.setOperatingEntityHuman(null);
     }
 
-    private void applyAutoReportMeta(BizRiskClue clue, SysUser user, LocalDateTime now) {
+    @Override
+    public String resolveSubmitOrgName(String submitUserName) {
+        SysUser loginUser = resolveCurrentUser();
+        return resolveSubmitOrgNameByDisplayName(submitUserName, loginUser);
+    }
+
+    @Override
+    public void updatePendingReport(String id, RiskClueManualCreateDTO dto, String reportUnit) {
+        validateBase(dto);
+        if (!hasText(id)) {
+            throw new BusinessException("线索ID不能为空");
+        }
+        BizRiskClue existing = riskClueService.getById(id.trim());
+        if (existing == null) {
+            throw new BusinessException("线索不存在");
+        }
+        if (existing.getAuditStatus() == null || existing.getAuditStatus() != 10) {
+            throw new BusinessException("仅未审核的报送可编辑");
+        }
+        String submitOrg = trimToNull(existing.getSubmitOrgName());
+        if (!hasText(reportUnit) || !reportUnit.equals(submitOrg)) {
+            throw new BusinessException("无权编辑该报送");
+        }
+
+        existing.setEventName(dto.getEventName().trim());
+        existing.setRiskDescription(dto.getRiskDescription().trim());
+        existing.setContent(trimToNull(dto.getContent()));
+        existing.setSourceUrl(trimToNull(dto.getSourceUrl()));
+        existing.setSourceWebsite(trimToNull(dto.getSourceWebsite()));
+        existing.setPaperTitle(trimToNull(dto.getPaperTitle()));
+        existing.setResearchTeam(trimToNull(dto.getResearchTeam()));
+        existing.setSubmissionChannel(trimToNull(dto.getSubmissionChannel()));
+        existing.setOperatingEntity(trimToNull(dto.getOperatingEntity()));
+        existing.setProductsComponentsServices(trimToNull(dto.getProductsComponentsServices()));
+
+        if (hasText(dto.getRiskCategory())) {
+            applyReportCategory(existing, dto.getRiskCategory());
+        } else {
+            existing.setClassReport1(null);
+            existing.setClassReport2(null);
+            existing.setClassReportList(null);
+        }
+
+        riskClueService.updatePendingSubmission(existing);
+    }
+
+    private void applyAutoReportMeta(BizRiskClue clue, RiskClueManualCreateDTO dto, SysUser loginUser, LocalDateTime now) {
         clue.setSubmissionTime(now);
-        clue.setSubmitUserName(hasText(user.getNickname()) ? user.getNickname() : user.getUsername());
-        clue.setSubmitOrgName(resolveDeptName(user));
+        String submitUser = hasText(dto.getSubmitUserName())
+                ? dto.getSubmitUserName().trim()
+                : displayName(loginUser);
+        clue.setSubmitUserName(submitUser);
+        clue.setSubmitOrgName(resolveSubmitOrgNameByDisplayName(submitUser, loginUser));
         clue.setIsSubmit(1);
+    }
+
+    /**
+     * 按报送人昵称（精确匹配）查用户部门；未命中时再按用户名匹配；仍无则回退当前登录人部门
+     */
+    private String resolveSubmitOrgNameByDisplayName(String submitUserName, SysUser loginUser) {
+        if (!hasText(submitUserName)) {
+            return resolveDeptName(loginUser);
+        }
+        String name = submitUserName.trim();
+        SysUser submitter = userService.getByNickname(name);
+        if (submitter == null) {
+            submitter = userService.getByUsername(name);
+        }
+        if (submitter == null && name.equals(displayName(loginUser))) {
+            submitter = loginUser;
+        }
+        if (submitter != null) {
+            return resolveDeptName(submitter);
+        }
+        return "";
+    }
+
+    private String displayName(SysUser user) {
+        return hasText(user.getNickname()) ? user.getNickname().trim() : user.getUsername();
     }
 
     private void saveReviewRecord(String clueId, BizRiskClue clue, SysUser user, LocalDateTime reviewTime) {

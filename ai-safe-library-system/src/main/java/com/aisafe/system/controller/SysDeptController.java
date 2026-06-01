@@ -1,10 +1,11 @@
 package com.aisafe.system.controller;
 
 import com.aisafe.common.result.R;
+import com.aisafe.system.dto.DeptSaveRequest;
 import com.aisafe.system.entity.SysDept;
 import com.aisafe.system.service.ISysDeptService;
+import com.aisafe.system.service.SysPermissionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.format.DateTimeFormatter;
@@ -21,9 +22,11 @@ import java.util.Map;
 public class SysDeptController {
 
     private final ISysDeptService deptService;
+    private final SysPermissionService permissionService;
 
-    public SysDeptController(ISysDeptService deptService) {
+    public SysDeptController(ISysDeptService deptService, SysPermissionService permissionService) {
         this.deptService = deptService;
+        this.permissionService = permissionService;
     }
 
     /**
@@ -57,6 +60,7 @@ public class SysDeptController {
             deptNode.put("phone", dept.getPhone());
             deptNode.put("email", dept.getEmail());
             deptNode.put("status", dept.getStatus());
+            deptNode.put("roleIds", permissionService.getRoleIdsByDeptId(dept.getId()));
             if (dept.getCreateTime() != null) {
                 deptNode.put("createTime", dept.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             }
@@ -86,19 +90,41 @@ public class SysDeptController {
      * POST /api/system/dept
      */
     @PostMapping
-    public R<String> add(@RequestBody SysDept dept) {
+    public R<Map<String, Object>> add(@RequestBody DeptSaveRequest request) {
+        SysDept dept = fromRequest(request);
         deptService.save(dept);
-        return R.ok("新增成功");
+        if (request.getRoleIds() != null) {
+            permissionService.assignDeptRoles(dept.getId(), request.getRoleIds());
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("deptId", dept.getId());
+        return R.ok("新增成功", data);
     }
 
-    /**
-     * 修改部门
-     * PUT /api/system/dept
-     */
     @PutMapping
-    public R<String> update(@RequestBody SysDept dept) {
+    public R<String> update(@RequestBody DeptSaveRequest request) {
+        if (request.getDeptId() == null) {
+            return R.fail("部门ID不能为空");
+        }
+        SysDept dept = fromRequest(request);
+        dept.setId(request.getDeptId());
         deptService.updateById(dept);
+        if (request.getRoleIds() != null) {
+            permissionService.assignDeptRoles(request.getDeptId(), request.getRoleIds());
+        }
         return R.ok("修改成功");
+    }
+
+    private SysDept fromRequest(DeptSaveRequest request) {
+        SysDept dept = new SysDept();
+        dept.setParentId(request.getParentId());
+        dept.setDeptName(request.getDeptName());
+        dept.setOrderNum(request.getOrderNum() != null ? request.getOrderNum() : 0);
+        dept.setLeader(request.getLeader());
+        dept.setPhone(request.getPhone());
+        dept.setEmail(request.getEmail());
+        dept.setStatus(org.springframework.util.StringUtils.hasText(request.getStatus()) ? request.getStatus() : "0");
+        return dept;
     }
 
     /**
@@ -109,5 +135,19 @@ public class SysDeptController {
     public R<String> delete(@PathVariable Long id) {
         deptService.removeById(id);
         return R.ok("删除成功");
+    }
+
+    @GetMapping("/{deptId}/roleIds")
+    public R<List<Long>> getRoleIds(@PathVariable Long deptId) {
+        return R.ok(permissionService.getRoleIdsByDeptId(deptId));
+    }
+
+    @PutMapping("/{deptId}/roles")
+    public R<String> assignRoles(@PathVariable Long deptId, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Number> raw = (List<Number>) body.get("roleIds");
+        List<Long> roleIds = raw == null ? List.of() : raw.stream().map(Number::longValue).toList();
+        permissionService.assignDeptRoles(deptId, roleIds);
+        return R.ok("分配成功");
     }
 }
