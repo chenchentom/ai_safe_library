@@ -50,8 +50,17 @@ public class RiskClueSearchQuery {
     /** 报送时间止 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss */
     private String submissionEndTime;
 
-    /** 报送单位（数据隔离） */
+    /** 报送人姓名（模糊） */
+    private String submitUserName;
+
+    /** 报送部门（模糊） */
+    private String submitOrgName;
+
+    /** 报送单位（数据隔离，精确匹配 submit_org_name） */
     private String reportUnit;
+
+    /** 是否共享：0=否，1=是 */
+    private Integer isShared;
 
     /** 兼容旧参数：来源类型精确匹配 submission_channel */
     private String sourceType;
@@ -111,8 +120,17 @@ public class RiskClueSearchQuery {
     public String getSubmissionEndTime() { return submissionEndTime; }
     public void setSubmissionEndTime(String submissionEndTime) { this.submissionEndTime = submissionEndTime; }
 
+    public String getSubmitUserName() { return submitUserName; }
+    public void setSubmitUserName(String submitUserName) { this.submitUserName = submitUserName; }
+
+    public String getSubmitOrgName() { return submitOrgName; }
+    public void setSubmitOrgName(String submitOrgName) { this.submitOrgName = submitOrgName; }
+
     public String getReportUnit() { return reportUnit; }
     public void setReportUnit(String reportUnit) { this.reportUnit = reportUnit; }
+
+    public Integer getIsShared() { return isShared; }
+    public void setIsShared(Integer isShared) { this.isShared = isShared; }
 
     public String getSourceType() { return sourceType; }
     public void setSourceType(String sourceType) { this.sourceType = sourceType; }

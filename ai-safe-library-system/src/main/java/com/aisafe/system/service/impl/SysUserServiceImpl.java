@@ -19,4 +19,30 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 .eq(SysUser::getUsername, username));
     }
 
+    @Override
+    public SysUser getByNickname(String nickname) {
+        return this.getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getNickname, nickname));
+    }
+
+    @Override
+    public boolean isUsernameTaken(String username, Long excludeUserId) {
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username);
+        if (excludeUserId != null) {
+            wrapper.ne(SysUser::getId, excludeUserId);
+        }
+        return this.count(wrapper) > 0;
+    }
+
+    @Override
+    public boolean isNicknameTaken(String nickname, Long excludeUserId) {
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getNickname, nickname);
+        if (excludeUserId != null) {
+            wrapper.ne(SysUser::getId, excludeUserId);
+        }
+        return this.count(wrapper) > 0;
+    }
+
 }

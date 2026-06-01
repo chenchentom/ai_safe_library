@@ -12,10 +12,13 @@ import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.query.ScriptType;
 import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.stereotype.Service;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -53,9 +56,13 @@ public class RiskClueServiceImpl implements RiskClueService {
 
         builder.withQuery(q -> q.bool(b -> {
             if (hasText(searchQuery.getKeyword())) {
+                String keyword = searchQuery.getKeyword().trim();
+                // 多词检索要求同一字段内全部词都命中，避免搜 "hermes agent" 却返回仅含 agent 的文档
                 b.must(m -> m.multiMatch(mm -> mm
                         .fields("event_name", "content", "risk_description")
-                        .query(searchQuery.getKeyword().trim())));
+                        .query(keyword)
+                        .type(TextQueryType.BestFields)
+                        .operator(Operator.And)));
             }
 
             addRiskCategoryFilter(b, searchQuery.getRiskCategory(), "class_report_1", "class_report_2", "class_report_list");
@@ -81,11 +88,16 @@ public class RiskClueServiceImpl implements RiskClueService {
             addKeywordLikeFilter(b, "source_website", searchQuery.getSourceWebsite());
             addKeywordLikeFilter(b, "operating_entity", searchQuery.getOperatingEntity());
             addKeywordLikeFilter(b, "submission_channel", searchQuery.getSubmissionChannel());
+            addKeywordLikeFilter(b, "submit_user_name", searchQuery.getSubmitUserName());
+            addKeywordLikeFilter(b, "submit_org_name", searchQuery.getSubmitOrgName());
 
             if (hasText(searchQuery.getProductsComponentsServices())) {
                 String value = searchQuery.getProductsComponentsServices().trim();
                 b.filter(f -> f.bool(bb -> bb
-                        .should(s -> s.match(m -> m.field("products_components_services").query(value)))
+                        .should(s -> s.match(m -> m
+                                .field("products_components_services")
+                                .query(value)
+                                .operator(Operator.And)))
                         .should(s -> s.wildcard(w -> w
                                 .field("products_components_services")
                                 .value("*" + escapeWildcard(value) + "*")))
@@ -100,6 +112,10 @@ public class RiskClueServiceImpl implements RiskClueService {
                 b.filter(f -> f.term(t -> t.field("submit_org_name").value(searchQuery.getReportUnit().trim())));
             }
 
+            if (searchQuery.getIsShared() != null) {
+                b.filter(f -> f.term(t -> t.field("is_shared").value(searchQuery.getIsShared())));
+            }
+
             addDateRangeFilter(
                     b,
                     "submission_time",
@@ -110,7 +126,7 @@ public class RiskClueServiceImpl implements RiskClueService {
         }));
 
         builder.withPageable(PageRequest.of(page - 1, size));
-        String sortField = hasText(searchQuery.getSortField()) ? searchQuery.getSortField().trim() : "submission_time";
+        String sortField = hasText(searchQuery.getSortField()) ? searchQuery.getSortField().trim() : "create_time";
         builder.withSort(Sort.by(Sort.Direction.DESC, sortField));
 
         SearchHits<BizRiskClue> hits = elasticsearchOperations.search(builder.build(), BizRiskClue.class);
@@ -131,25 +147,40 @@ public class RiskClueServiceImpl implements RiskClueService {
         if (!hasText(riskCategory)) {
             return;
         }
-        String trimmed = riskCategory.trim();
-        int slashIndex = trimmed.indexOf('/');
-
-        if (slashIndex > 0) {
-            String level1 = trimmed.substring(0, slashIndex).trim();
-            String level2 = trimmed.substring(slashIndex + 1).trim();
-            if (hasText(level1) && hasText(level2)) {
-                String fullPath = level1 + "/" + level2;
-                b.filter(f -> f.bool(bb -> bb
-                        .should(s -> s.term(t -> t.field(fieldList).value(fullPath)))
-                        .should(s -> s.bool(inner -> inner
-                                .must(m -> m.term(t -> t.field(fieldLevel1).value(level1)))
-                                .must(m -> m.term(t -> t.field(fieldLevel2).value(level2)))))
-                        .minimumShouldMatch("1")));
-                return;
+        String[] segments = riskCategory.split(",");
+        java.util.List<String> categories = new java.util.ArrayList<>();
+        for (String segment : segments) {
+            if (hasText(segment)) {
+                categories.add(segment.trim());
             }
         }
-
-        b.filter(f -> f.term(t -> t.field(fieldLevel1).value(trimmed)));
+        if (categories.isEmpty()) {
+            return;
+        }
+        b.filter(f -> f.bool(outer -> {
+            for (String category : categories) {
+                String trimmed = category;
+                outer.should(s -> {
+                    int slashIndex = trimmed.indexOf('/');
+                    if (slashIndex > 0) {
+                        String level1 = trimmed.substring(0, slashIndex).trim();
+                        String level2 = trimmed.substring(slashIndex + 1).trim();
+                        if (hasText(level1) && hasText(level2)) {
+                            String fullPath = level1 + "/" + level2;
+                            return s.bool(inner -> inner
+                                    .should(sh -> sh.term(t -> t.field(fieldList).value(fullPath)))
+                                    .should(sh -> sh.bool(n -> n
+                                            .must(m -> m.term(t -> t.field(fieldLevel1).value(level1)))
+                                            .must(m -> m.term(t -> t.field(fieldLevel2).value(level2)))))
+                                    .minimumShouldMatch("1"));
+                        }
+                    }
+                    return s.term(t -> t.field(fieldLevel1).value(trimmed));
+                });
+            }
+            outer.minimumShouldMatch("1");
+            return outer;
+        }));
     }
 
     private void addKeywordLikeFilter(BoolQuery.Builder b, String field, String value) {
@@ -255,6 +286,45 @@ public class RiskClueServiceImpl implements RiskClueService {
         elasticsearchOperations.update(updateQuery, elasticsearchOperations.getIndexCoordinatesFor(BizRiskClue.class));
     }
 
+    @Override
+    public void updatePendingSubmission(BizRiskClue clue) {
+        if (clue == null || !hasText(clue.getId())) {
+            throw new com.aisafe.common.exception.BusinessException("线索ID不能为空");
+        }
+        if (!hasText(clue.getEventName())) {
+            throw new com.aisafe.common.exception.BusinessException("请填写事件名称");
+        }
+        if (!hasText(clue.getRiskDescription())) {
+            throw new com.aisafe.common.exception.BusinessException("请填写风险描述");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Document doc = Document.create();
+        doc.put("event_name", clue.getEventName().trim());
+        doc.put("risk_description", clue.getRiskDescription().trim());
+        putOptionalText(doc, "content", clue.getContent());
+        putOptionalText(doc, "source_url", clue.getSourceUrl());
+        putOptionalText(doc, "source_website", clue.getSourceWebsite());
+        putOptionalText(doc, "paper_title", clue.getPaperTitle());
+        putOptionalText(doc, "research_team", clue.getResearchTeam());
+        putOptionalText(doc, "submission_channel", clue.getSubmissionChannel());
+        putOptionalText(doc, "operating_entity", clue.getOperatingEntity());
+        putOptionalText(doc, "products_components_services", clue.getProductsComponentsServices());
+        putOptionalText(doc, "class_report_1", clue.getClassReport1());
+        putOptionalText(doc, "class_report_2", clue.getClassReport2());
+        if (clue.getClassReportList() != null && !clue.getClassReportList().isEmpty()) {
+            doc.put("class_report_list", clue.getClassReportList());
+        } else {
+            doc.put("class_report_list", null);
+        }
+        doc.put("update_time", now.format(ES_DATE_TIME));
+
+        UpdateQuery updateQuery = UpdateQuery.builder(clue.getId().trim())
+                .withDocument(doc)
+                .build();
+        elasticsearchOperations.update(updateQuery, elasticsearchOperations.getIndexCoordinatesFor(BizRiskClue.class));
+    }
+
     private Document buildClueDocument(BizRiskClue clue) {
         Document doc = Document.create();
         if (clue.getNumber() != null) {
@@ -307,12 +377,24 @@ public class RiskClueServiceImpl implements RiskClueService {
         if (clue.getIsVerify() != null) {
             doc.put("is_verify", clue.getIsVerify());
         }
+        if (clue.getIsShared() != null) {
+            doc.put("is_shared", clue.getIsShared());
+        }
+        putDateTime(doc, "share_time", clue.getShareTime());
         return doc;
     }
 
     private void putIfHasText(Document doc, String field, String value) {
         if (hasText(value)) {
             doc.put(field, value.trim());
+        }
+    }
+
+    private void putOptionalText(Document doc, String field, String value) {
+        if (hasText(value)) {
+            doc.put(field, value.trim());
+        } else {
+            doc.put(field, null);
         }
     }
 
@@ -327,7 +409,62 @@ public class RiskClueServiceImpl implements RiskClueService {
         if (!hasText(id)) {
             return;
         }
+        BizRiskClue clue = getById(id.trim());
+        if (clue == null) {
+            throw new com.aisafe.common.exception.BusinessException("线索不存在");
+        }
+        if (clue.getAuditStatus() != null && clue.getAuditStatus() == 20) {
+            throw new com.aisafe.common.exception.BusinessException("已审核的数据不可删除");
+        }
         bizRiskClueRepository.deleteById(id.trim());
+    }
+
+    @Override
+    public Map<String, Object> toggleEventShare(String id) {
+        if (!hasText(id)) {
+            throw new com.aisafe.common.exception.BusinessException("事件ID不能为空");
+        }
+        BizRiskClue clue = getById(id.trim());
+        if (clue == null) {
+            throw new com.aisafe.common.exception.BusinessException("事件不存在");
+        }
+        if (clue.getAuditStatus() == null || clue.getAuditStatus() != 20
+                || clue.getIsWarehouse() == null || clue.getIsWarehouse() != 1) {
+            throw new com.aisafe.common.exception.BusinessException("仅已入库的安全事件可共享");
+        }
+
+        boolean currentlyShared = clue.getIsShared() != null && clue.getIsShared() == 1;
+        LocalDateTime now = LocalDateTime.now();
+        String nowStr = now.format(ES_DATE_TIME);
+        Map<String, Object> result = new HashMap<>();
+
+        if (currentlyShared) {
+            UpdateQuery updateQuery = UpdateQuery.builder(id.trim())
+                    .withScriptType(ScriptType.INLINE)
+                    .withScript(
+                            "ctx._source.is_shared = 0; "
+                                    + "ctx._source.remove('share_time'); "
+                                    + "ctx._source.update_time = params.now;")
+                    .withParams(Map.of("now", nowStr))
+                    .build();
+            elasticsearchOperations.update(updateQuery,
+                    elasticsearchOperations.getIndexCoordinatesFor(BizRiskClue.class));
+            result.put("isShared", 0);
+            result.put("shareTime", null);
+        } else {
+            Document doc = Document.create();
+            doc.put("is_shared", 1);
+            doc.put("share_time", nowStr);
+            doc.put("update_time", nowStr);
+            UpdateQuery updateQuery = UpdateQuery.builder(id.trim())
+                    .withDocument(doc)
+                    .build();
+            elasticsearchOperations.update(updateQuery,
+                    elasticsearchOperations.getIndexCoordinatesFor(BizRiskClue.class));
+            result.put("isShared", 1);
+            result.put("shareTime", nowStr);
+        }
+        return result;
     }
 
     @Override

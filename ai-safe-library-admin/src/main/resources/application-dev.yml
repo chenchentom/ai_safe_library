@@ -48,6 +48,12 @@ spring:
     connection-timeout: 10s
     socket-timeout: 30s
 
+# ---- 本地文件路径（部署时可按环境修改） ----
+aisafe:
+  file:
+    base-dir: /Volumes/mac/code/java/ai_safe_library/ai-file
+    risk-report-template-path: /Volumes/mac/code/java/ai_safe_library/ai-file/数据模版.xlsx
+
 # ---- 开发环境专属日志 ----
 logging:
   level:

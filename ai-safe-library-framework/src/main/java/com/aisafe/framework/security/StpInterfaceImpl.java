@@ -1,7 +1,6 @@
 package com.aisafe.framework.security;
 
 import cn.dev33.satoken.stp.StpInterface;
-import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
@@ -12,7 +11,7 @@ import java.util.List;
  * 每次鉴权时调用，从数据库中加载当前用户的角色和权限列表。
  * 阶段一：返回空列表，后续实现数据库查询。
  */
-@Component
+/** @deprecated 由 system 模块 {@code SysStpInterfaceImpl} 提供实现 */
 public class StpInterfaceImpl implements StpInterface {
 
     /**

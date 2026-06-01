@@ -2,9 +2,11 @@ package com.aisafe.business.controller;
 
 import com.aisafe.business.document.BizRiskClue;
 import com.aisafe.business.document.BizRiskReviewRecord;
+import com.aisafe.business.dto.BatchReviewResult;
 import com.aisafe.business.dto.ReviewDTO;
 import com.aisafe.business.dto.RiskClueManualCreateDTO;
 import com.aisafe.business.dto.RiskClueSearchQuery;
+import com.aisafe.business.support.RiskClueSearchSupport;
 import com.aisafe.business.service.RiskClueManualService;
 import com.aisafe.business.service.RiskClueService;
 import com.aisafe.business.service.RiskReviewService;
@@ -13,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +61,8 @@ public class RiskClueController {
             @RequestParam(required = false) String auditUserName,
             @RequestParam(required = false) String auditStartTime,
             @RequestParam(required = false) String auditEndTime,
+            @RequestParam(required = false) String submitUserName,
+            @RequestParam(required = false) String submitOrgName,
             @RequestParam(required = false) String riskLevel,
             @RequestParam(required = false) String sourceType,
             @RequestParam(required = false) String startTime,
@@ -65,136 +70,51 @@ public class RiskClueController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        RiskClueSearchQuery query = buildSearchQuery(
+        RiskClueSearchQuery query = RiskClueSearchSupport.buildSearchQuery(
                 keyword, riskCategory, reviewStatus, sourceWebsite, operatingEntity,
                 submissionChannel, productsComponentsServices, submissionStartTime, submissionEndTime,
                 isWarehouse, auditRiskCategory, operatingEntityHuman, auditUserName,
-                auditStartTime, auditEndTime,
+                auditStartTime, auditEndTime, submitUserName, submitOrgName,
                 sourceType, startTime, endTime, page, size, null);
         return R.ok(riskClueService.search(query));
     }
 
     @PostMapping("/search")
     public R<Map<String, Object>> searchPost(@RequestBody(required = false) Map<String, Object> body) {
-        if (body == null) {
-            body = Map.of();
-        }
-        RiskClueSearchQuery query = buildSearchQuery(
-                (String) body.get("keyword"),
-                (String) body.get("riskCategory"),
-                body.get("reviewStatus"),
-                (String) body.get("sourceWebsite"),
-                (String) body.get("operatingEntity"),
-                (String) body.get("submissionChannel"),
-                (String) body.get("productsComponentsServices"),
-                firstNonBlank((String) body.get("submissionStartTime"), (String) body.get("startTime")),
-                firstNonBlank((String) body.get("submissionEndTime"), (String) body.get("endTime")),
-                body.get("isWarehouse"),
-                (String) body.get("auditRiskCategory"),
-                (String) body.get("operatingEntityHuman"),
-                (String) body.get("auditUserName"),
-                (String) body.get("auditStartTime"),
-                (String) body.get("auditEndTime"),
-                (String) body.get("sourceType"),
-                (String) body.get("startTime"),
-                (String) body.get("endTime"),
-                body.get("page") != null ? ((Number) body.get("page")).intValue() : 1,
-                body.get("size") != null ? ((Number) body.get("size")).intValue() : 10,
-                null);
+        RiskClueSearchQuery query = RiskClueSearchSupport.buildFromMap(body, null);
         return R.ok(riskClueService.search(query));
-    }
-
-    private RiskClueSearchQuery buildSearchQuery(
-            String keyword,
-            String riskCategory,
-            Object reviewStatus,
-            String sourceWebsite,
-            String operatingEntity,
-            String submissionChannel,
-            String productsComponentsServices,
-            String submissionStartTime,
-            String submissionEndTime,
-            Object isWarehouse,
-            String auditRiskCategory,
-            String operatingEntityHuman,
-            String auditUserName,
-            String auditStartTime,
-            String auditEndTime,
-            String sourceType,
-            String legacyStartTime,
-            String legacyEndTime,
-            int page,
-            int size,
-            String reportUnit) {
-
-        RiskClueSearchQuery query = new RiskClueSearchQuery();
-        query.setKeyword(keyword);
-        query.setRiskCategory(riskCategory);
-        query.setReviewStatus(parseReviewStatus(reviewStatus));
-        query.setSourceWebsite(sourceWebsite);
-        query.setOperatingEntity(operatingEntity);
-        query.setSubmissionChannel(submissionChannel);
-        query.setProductsComponentsServices(productsComponentsServices);
-        query.setSubmissionStartTime(firstNonBlank(submissionStartTime, legacyStartTime));
-        query.setSubmissionEndTime(firstNonBlank(submissionEndTime, legacyEndTime));
-        query.setIsWarehouse(parseIsWarehouse(isWarehouse));
-        query.setAuditRiskCategory(auditRiskCategory);
-        query.setOperatingEntityHuman(operatingEntityHuman);
-        query.setAuditUserName(auditUserName);
-        query.setAuditStartTime(auditStartTime);
-        query.setAuditEndTime(auditEndTime);
-        query.setSourceType(sourceType);
-        query.setPage(page);
-        query.setSize(size);
-        query.setReportUnit(reportUnit);
-        return query;
-    }
-
-    private String firstNonBlank(String primary, String fallback) {
-        if (primary != null && !primary.trim().isEmpty()) {
-            return primary;
-        }
-        return fallback;
-    }
-
-    private Integer parseReviewStatus(Object reviewStatus) {
-        if (reviewStatus == null) {
-            return null;
-        }
-        if (reviewStatus instanceof Integer) {
-            return (Integer) reviewStatus;
-        }
-        if (reviewStatus instanceof Number) {
-            return ((Number) reviewStatus).intValue();
-        }
-        if (reviewStatus instanceof String) {
-            String str = (String) reviewStatus;
-            if (str.trim().isEmpty()) {
-                return null;
-            }
-            try {
-                return Integer.parseInt(str.trim());
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private Integer parseIsWarehouse(Object isWarehouse) {
-        if (isWarehouse == null) {
-            return null;
-        }
-        if (isWarehouse instanceof Boolean) {
-            return Boolean.TRUE.equals(isWarehouse) ? 1 : 0;
-        }
-        return parseReviewStatus(isWarehouse);
     }
 
     @PutMapping
     public R<String> save(@RequestBody BizRiskClue clue) {
         String id = riskClueService.save(clue);
         return R.ok(id);
+    }
+
+    /**
+     * 根据报送人昵称解析报送部门（用于新增表单联动；路径须在 /{id} 之前且勿与线索 id 冲突）
+     */
+    @GetMapping("/manual/submit-org")
+    public R<Map<String, String>> resolveSubmitOrg(@RequestParam String submitUserName) {
+        String orgName = riskClueManualService.resolveSubmitOrgName(submitUserName);
+        Map<String, String> result = new HashMap<>();
+        result.put("submitOrgName", orgName != null ? orgName : "");
+        return R.ok(result);
+    }
+
+    @GetMapping("/stats")
+    public R<Map<String, Object>> stats() {
+        long total = riskClueService.countAll();
+        long pending = riskClueService.countByReviewStatus(10);
+        long reviewed = riskClueService.countByReviewStatus(20);
+        long warehoused = riskClueService.countWarehoused();
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", total);
+        stats.put("pending", pending);
+        stats.put("reviewed", reviewed);
+        stats.put("warehoused", warehoused);
+        return R.ok(stats);
     }
 
     /**
@@ -221,25 +141,26 @@ public class RiskClueController {
         return R.ok("审核完成");
     }
 
+    /**
+     * 批量审核：按当前筛选条件处理所有未审核线索，审核字段与报送文本内容一致
+     */
+    @PostMapping("/batch-review")
+    public R<BatchReviewResult> batchReview(@RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> payload = body != null ? body : Map.of();
+        Integer batchIsWarehouse = RiskClueSearchSupport.parseIsWarehouse(payload.get("batchIsWarehouse"));
+        int warehouseDecision = batchIsWarehouse != null && batchIsWarehouse != 0 ? 1 : 0;
+
+        Map<String, Object> filterBody = new HashMap<>(payload);
+        filterBody.remove("batchIsWarehouse");
+        RiskClueSearchQuery query = RiskClueSearchSupport.buildFromMap(filterBody, null);
+        BatchReviewResult result = riskReviewService.batchReviewByQuery(query, warehouseDecision);
+        return R.ok(result);
+    }
+
     @GetMapping("/{id}/review-history")
     public R<List<BizRiskReviewRecord>> reviewHistory(@PathVariable String id) {
         List<BizRiskReviewRecord> records = riskReviewService.getReviewHistory(id);
         return R.ok(records);
-    }
-
-    @GetMapping("/stats")
-    public R<Map<String, Object>> stats() {
-        long total = riskClueService.countAll();
-        long pending = riskClueService.countByReviewStatus(10);
-        long reviewed = riskClueService.countByReviewStatus(20);
-        long warehoused = riskClueService.countWarehoused();
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("total", total);
-        stats.put("pending", pending);
-        stats.put("reviewed", reviewed);
-        stats.put("warehoused", warehoused);
-        return R.ok(stats);
     }
 
     @DeleteMapping("/{id}")

@@ -42,6 +42,17 @@ public interface RiskClueService {
 
     void deleteById(String id);
 
+    /**
+     * 更新待审核线索的报送基础字段（不修改审核侧字段与报送时间）
+     */
+    void updatePendingSubmission(BizRiskClue clue);
+
+    /**
+     * 切换安全事件共享状态（仅已入库事件）
+     * @return isShared、shareTime
+     */
+    Map<String, Object> toggleEventShare(String id);
+
     long countByReviewStatus(Integer reviewStatus);
 
     long countAll();

@@ -92,6 +92,14 @@ public class SecurityEventController {
         return R.ok(Map.of("id", id));
     }
 
+    /**
+     * 切换共享状态（已共享 ↔ 未共享）
+     */
+    @PutMapping("/{id}/share")
+    public R<Map<String, Object>> toggleShare(@PathVariable String id) {
+        return R.ok(riskClueService.toggleEventShare(id));
+    }
+
     private RiskClueSearchQuery buildEventQuery(
             String keyword,
             String auditRiskCategory,

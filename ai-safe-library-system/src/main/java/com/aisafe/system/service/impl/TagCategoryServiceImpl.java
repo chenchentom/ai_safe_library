@@ -47,10 +47,17 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
     @Transactional
     @CacheEvict(value = "tag:tree", key = "#entity.module")
     public BizTagCategory add(BizTagCategory entity) {
+        if (StrUtil.isBlank(entity.getTagCode())) {
+            throw new IllegalArgumentException("标签编码不能为空");
+        }
+        entity.setTagCode(entity.getTagCode().trim());
+
         // 计算 tag_level 和 tag_path
         if (entity.getParentId() == null || entity.getParentId() == 0) {
             entity.setTagLevel(0);
-            // tag_path 在保存后回填 (需要 id)
+            if (StrUtil.isBlank(entity.getModule())) {
+                throw new IllegalArgumentException("所属模块不能为空");
+            }
         } else {
             BizTagCategory parent = baseMapper.selectById(entity.getParentId());
             if (parent == null) {
@@ -59,6 +66,9 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
             entity.setModule(parent.getModule());
             entity.setTagLevel(parent.getTagLevel() + 1);
         }
+
+        assertTagCodeAvailable(entity.getModule(), entity.getTagCode());
+        baseMapper.physicalDeleteSoftDeletedByCode(entity.getModule(), entity.getTagCode());
 
         // 设置默认值
         if (entity.getSortOrder() == null) entity.setSortOrder(0);
@@ -101,7 +111,7 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
 
     @Override
     @Transactional
-    @CacheEvict(value = "tag:tree", key = "#root.module")
+    @CacheEvict(value = "tag:tree", allEntries = true)
     public void delete(Long id) {
         BizTagCategory node = baseMapper.selectById(id);
         if (node == null) {
@@ -142,6 +152,15 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
         }
         node.setSortOrder(newSortOrder);
         baseMapper.updateById(node);
+    }
+
+    private void assertTagCodeAvailable(String module, String tagCode) {
+        LambdaQueryWrapper<BizTagCategory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizTagCategory::getModule, module)
+               .eq(BizTagCategory::getTagCode, tagCode);
+        if (baseMapper.selectCount(wrapper) > 0) {
+            throw new IllegalArgumentException("标签编码已存在: " + tagCode);
+        }
     }
 
     // ==================== Excel 导入导出 (骨架) ====================
