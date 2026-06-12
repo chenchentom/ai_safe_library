@@ -1,16 +1,20 @@
 package com.aisafe.system.controller;
 
+import com.aisafe.common.enums.BusinessType;
 import com.aisafe.common.result.R;
 import com.aisafe.system.dto.DeptSaveRequest;
 import com.aisafe.system.entity.SysDept;
+import com.aisafe.system.service.AuditLogService;
 import com.aisafe.system.service.ISysDeptService;
 import com.aisafe.system.service.SysPermissionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,10 +27,14 @@ public class SysDeptController {
 
     private final ISysDeptService deptService;
     private final SysPermissionService permissionService;
+    private final AuditLogService auditLogService;
 
-    public SysDeptController(ISysDeptService deptService, SysPermissionService permissionService) {
+    public SysDeptController(ISysDeptService deptService,
+                             SysPermissionService permissionService,
+                             AuditLogService auditLogService) {
         this.deptService = deptService;
         this.permissionService = permissionService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -52,15 +60,22 @@ public class SysDeptController {
 
         for (SysDept dept : deptList) {
             Map<String, Object> deptNode = new HashMap<>();
-            deptNode.put("deptId", dept.getId());
+            deptNode.put("deptId", dept.getId() != null ? String.valueOf(dept.getId()) : null);
             deptNode.put("deptName", dept.getDeptName());
-            deptNode.put("parentId", dept.getParentId());
+            deptNode.put("parentId", toIdString(dept.getParentId()));
             deptNode.put("orderNum", dept.getOrderNum());
             deptNode.put("leader", dept.getLeader());
             deptNode.put("phone", dept.getPhone());
             deptNode.put("email", dept.getEmail());
             deptNode.put("status", dept.getStatus());
-            deptNode.put("roleIds", permissionService.getRoleIdsByDeptId(dept.getId()));
+            List<Long> roleIds = permissionService.getRoleIdsByDeptId(dept.getId());
+            List<String> roleIdStrings = new ArrayList<>();
+            if (roleIds != null) {
+                for (Long roleId : roleIds) {
+                    roleIdStrings.add(String.valueOf(roleId));
+                }
+            }
+            deptNode.put("roleIds", roleIdStrings);
             if (dept.getCreateTime() != null) {
                 deptNode.put("createTime", dept.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             }
@@ -97,27 +112,28 @@ public class SysDeptController {
             permissionService.assignDeptRoles(dept.getId(), request.getRoleIds());
         }
         Map<String, Object> data = new HashMap<>();
-        data.put("deptId", dept.getId());
+        data.put("deptId", String.valueOf(dept.getId()));
         return R.ok("新增成功", data);
     }
 
     @PutMapping
     public R<String> update(@RequestBody DeptSaveRequest request) {
-        if (request.getDeptId() == null) {
+        Long deptId = parseId(request.getDeptId());
+        if (deptId == null) {
             return R.fail("部门ID不能为空");
         }
         SysDept dept = fromRequest(request);
-        dept.setId(request.getDeptId());
+        dept.setId(deptId);
         deptService.updateById(dept);
         if (request.getRoleIds() != null) {
-            permissionService.assignDeptRoles(request.getDeptId(), request.getRoleIds());
+            permissionService.assignDeptRoles(deptId, request.getRoleIds());
         }
         return R.ok("修改成功");
     }
 
     private SysDept fromRequest(DeptSaveRequest request) {
         SysDept dept = new SysDept();
-        dept.setParentId(request.getParentId());
+        dept.setParentId(parseParentId(request.getParentId()));
         dept.setDeptName(request.getDeptName());
         dept.setOrderNum(request.getOrderNum() != null ? request.getOrderNum() : 0);
         dept.setLeader(request.getLeader());
@@ -132,22 +148,76 @@ public class SysDeptController {
      * DELETE /api/system/dept/{id}
      */
     @DeleteMapping("/{id}")
-    public R<String> delete(@PathVariable Long id) {
-        deptService.removeById(id);
+    public R<String> delete(@PathVariable String id) {
+        Long deptId = parseId(id);
+        if (deptId == null) {
+            return R.fail("部门ID无效");
+        }
+        SysDept dept = deptService.getById(deptId);
+        permissionService.assignDeptRoles(deptId, List.of());
+        deptService.removeById(deptId);
+        if (dept != null) {
+            Map<String, Object> snapshot = new LinkedHashMap<>();
+            snapshot.put("deptId", String.valueOf(deptId));
+            snapshot.put("deptName", dept.getDeptName());
+            auditLogService.recordOperSuccess(
+                    "删除部门", BusinessType.DELETE, "SysDeptController.delete", snapshot);
+        }
         return R.ok("删除成功");
     }
 
     @GetMapping("/{deptId}/roleIds")
-    public R<List<Long>> getRoleIds(@PathVariable Long deptId) {
-        return R.ok(permissionService.getRoleIdsByDeptId(deptId));
+    public R<List<String>> getRoleIds(@PathVariable String deptId) {
+        Long parsedDeptId = parseId(deptId);
+        if (parsedDeptId == null) {
+            return R.fail("部门ID无效");
+        }
+        List<Long> roleIds = permissionService.getRoleIdsByDeptId(parsedDeptId);
+        List<String> result = new ArrayList<>();
+        if (roleIds != null) {
+            for (Long roleId : roleIds) {
+                result.add(String.valueOf(roleId));
+            }
+        }
+        return R.ok(result);
     }
 
     @PutMapping("/{deptId}/roles")
-    public R<String> assignRoles(@PathVariable Long deptId, @RequestBody Map<String, Object> body) {
+    public R<String> assignRoles(@PathVariable String deptId, @RequestBody Map<String, Object> body) {
+        Long parsedDeptId = parseId(deptId);
+        if (parsedDeptId == null) {
+            return R.fail("部门ID无效");
+        }
         @SuppressWarnings("unchecked")
         List<Number> raw = (List<Number>) body.get("roleIds");
         List<Long> roleIds = raw == null ? List.of() : raw.stream().map(Number::longValue).toList();
-        permissionService.assignDeptRoles(deptId, roleIds);
+        permissionService.assignDeptRoles(parsedDeptId, roleIds);
         return R.ok("分配成功");
+    }
+
+    private Long parseId(String id) {
+        if (!StringUtils.hasText(id)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(id.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Long parseParentId(String parentId) {
+        Long parsed = parseId(parentId);
+        if (parsed == null || parsed == 0L) {
+            return 0L;
+        }
+        return parsed;
+    }
+
+    private String toIdString(Long id) {
+        if (id == null || id == 0L) {
+            return "0";
+        }
+        return String.valueOf(id);
     }
 }

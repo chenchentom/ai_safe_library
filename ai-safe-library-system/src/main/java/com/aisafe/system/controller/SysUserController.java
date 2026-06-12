@@ -1,9 +1,11 @@
 package com.aisafe.system.controller;
 
+import com.aisafe.common.enums.BusinessType;
 import com.aisafe.common.result.R;
 import com.aisafe.system.dto.UserSaveRequest;
 import com.aisafe.system.entity.SysDept;
 import com.aisafe.system.entity.SysUser;
+import com.aisafe.system.service.AuditLogService;
 import com.aisafe.system.service.ISysDeptService;
 import com.aisafe.system.service.ISysUserService;
 import com.aisafe.system.service.SysPermissionService;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,13 +32,16 @@ public class SysUserController {
     private final ISysUserService userService;
     private final ISysDeptService deptService;
     private final SysPermissionService permissionService;
+    private final AuditLogService auditLogService;
 
     public SysUserController(ISysUserService userService,
                              ISysDeptService deptService,
-                             SysPermissionService permissionService) {
+                             SysPermissionService permissionService,
+                             AuditLogService auditLogService) {
         this.userService = userService;
         this.deptService = deptService;
         this.permissionService = permissionService;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/list")
@@ -75,31 +81,34 @@ public class SysUserController {
     public R<Map<String, Boolean>> checkUnique(
             @RequestParam(required = false) String userName,
             @RequestParam(required = false) String nickName,
-            @RequestParam(required = false) Long userId) {
+            @RequestParam(required = false) String userId) {
+        Long excludeUserId = parseUserId(userId);
         Map<String, Boolean> result = new HashMap<>();
         if (StringUtils.hasText(userName)) {
-            result.put("userNameUnique", !userService.isUsernameTaken(userName.trim(), userId));
+            result.put("userNameUnique", !userService.isUsernameTaken(userName.trim(), excludeUserId));
         }
         if (StringUtils.hasText(nickName)) {
-            result.put("nickNameUnique", !userService.isNicknameTaken(nickName.trim(), userId));
+            result.put("nickNameUnique", !userService.isNicknameTaken(nickName.trim(), excludeUserId));
         }
         return R.ok(result);
     }
 
     @GetMapping("/{userId}")
-    public R<Map<String, Object>> get(@PathVariable Long userId) {
-        SysUser user = userService.getById(userId);
+    public R<Map<String, Object>> get(@PathVariable String userId) {
+        Long parsedUserId = parseUserId(userId);
+        if (parsedUserId == null) {
+            return R.fail("用户ID无效");
+        }
+        SysUser user = userService.getById(parsedUserId);
         if (user == null) {
             return R.fail("用户不存在");
         }
-        Map<String, Object> data = toUserMap(user, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        data.put("roleIds", permissionService.getRoleIdsByUserId(userId));
-        return R.ok(data);
+        return R.ok(toUserMap(user, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
     }
 
     @PostMapping
     public R<String> add(@RequestBody UserSaveRequest request) {
-        R<String> uniqueError = validateUnique(request);
+        R<String> uniqueError = validateUnique(request, null);
         if (uniqueError != null) {
             return uniqueError;
         }
@@ -112,28 +121,45 @@ public class SysUserController {
 
     @PutMapping
     public R<String> update(@RequestBody UserSaveRequest request) {
-        if (request.getUserId() == null) {
+        Long userId = parseUserId(request.getUserId());
+        if (userId == null) {
             return R.fail("用户ID不能为空");
         }
-        R<String> uniqueError = validateUnique(request);
+        R<String> uniqueError = validateUnique(request, userId);
         if (uniqueError != null) {
             return uniqueError;
         }
         SysUser user = fromRequest(request);
-        user.setId(request.getUserId());
+        user.setId(userId);
         user.setPassword(null);
         userService.updateById(user);
         if (request.getRoleIds() != null) {
-            permissionService.assignUserRoles(request.getUserId(), request.getRoleIds());
+            permissionService.assignUserRoles(userId, request.getRoleIds());
         }
         return R.ok("修改成功");
     }
 
     @DeleteMapping("/{ids}")
     public R<String> delete(@PathVariable String ids) {
+        List<Map<String, Object>> deletedUsers = new ArrayList<>();
         for (String id : ids.split(",")) {
-            userService.removeById(Long.parseLong(id));
+            Long userId = Long.parseLong(id.trim());
+            SysUser user = userService.getById(userId);
+            if (user != null) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("userId", user.getId());
+                item.put("userName", user.getUsername());
+                item.put("nickName", user.getNickname());
+                deletedUsers.add(item);
+            }
+            permissionService.assignUserRoles(userId, List.of());
+            userService.removeById(userId);
         }
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("count", deletedUsers.size());
+        snapshot.put("users", deletedUsers);
+        auditLogService.recordOperSuccess(
+                "删除用户", BusinessType.DELETE, "SysUserController.delete", snapshot);
         return R.ok("删除成功");
     }
 
@@ -169,7 +195,7 @@ public class SysUserController {
         return new BCryptPasswordEncoder().encode(plainPassword.trim());
     }
 
-    private R<String> validateUnique(UserSaveRequest request) {
+    private R<String> validateUnique(UserSaveRequest request, Long excludeUserId) {
         if (!StringUtils.hasText(request.getUserName())) {
             return R.fail("用户名不能为空");
         }
@@ -178,7 +204,24 @@ public class SysUserController {
         }
         String username = request.getUserName().trim();
         String nickname = request.getNickName().trim();
-        Long excludeUserId = request.getUserId();
+
+        if (excludeUserId != null) {
+            SysUser existing = userService.getById(excludeUserId);
+            if (existing != null) {
+                boolean usernameChanged = !username.equals(existing.getUsername());
+                boolean nicknameChanged = !nickname.equals(existing.getNickname());
+                if (!usernameChanged && !nicknameChanged) {
+                    return null;
+                }
+                if (usernameChanged && userService.isUsernameTaken(username, excludeUserId)) {
+                    return R.fail("用户名已存在");
+                }
+                if (nicknameChanged && userService.isNicknameTaken(nickname, excludeUserId)) {
+                    return R.fail("昵称已存在");
+                }
+                return null;
+            }
+        }
 
         if (userService.isUsernameTaken(username, excludeUserId)) {
             return R.fail("用户名已存在");
@@ -189,11 +232,22 @@ public class SysUserController {
         return null;
     }
 
+    private Long parseUserId(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(userId.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private SysUser fromRequest(UserSaveRequest request) {
         SysUser user = new SysUser();
         user.setUsername(StringUtils.hasText(request.getUserName()) ? request.getUserName().trim() : null);
         user.setNickname(StringUtils.hasText(request.getNickName()) ? request.getNickName().trim() : null);
-        user.setDeptId(request.getDeptId());
+        user.setDeptId(parseUserId(request.getDeptId()));
         user.setPhone(request.getPhonenumber());
         user.setEmail(request.getEmail());
         user.setStatus(StringUtils.hasText(request.getStatus()) ? request.getStatus() : "0");
@@ -202,23 +256,30 @@ public class SysUserController {
 
     private Map<String, Object> toUserMap(SysUser user, DateTimeFormatter formatter) {
         Map<String, Object> userMap = new HashMap<>();
-        userMap.put("userId", user.getId());
+        userMap.put("userId", user.getId() != null ? String.valueOf(user.getId()) : null);
         userMap.put("userName", user.getUsername());
         userMap.put("nickName", user.getNickname());
         userMap.put("phonenumber", user.getPhone());
         userMap.put("email", user.getEmail());
         userMap.put("status", user.getStatus());
-        userMap.put("deptId", user.getDeptId());
+        userMap.put("deptId", user.getDeptId() != null ? String.valueOf(user.getDeptId()) : null);
         if (user.getDeptId() != null) {
             SysDept dept = deptService.getById(user.getDeptId());
             if (dept != null) {
                 Map<String, Object> deptMap = new HashMap<>();
-                deptMap.put("deptId", dept.getId());
+                deptMap.put("deptId", String.valueOf(dept.getId()));
                 deptMap.put("deptName", dept.getDeptName());
                 userMap.put("dept", deptMap);
             }
         }
-        userMap.put("roleIds", permissionService.getRoleIdsByUserId(user.getId()));
+        List<Long> roleIds = permissionService.getRoleIdsByUserId(user.getId());
+        List<String> roleIdStrings = new ArrayList<>();
+        if (roleIds != null) {
+            for (Long roleId : roleIds) {
+                roleIdStrings.add(String.valueOf(roleId));
+            }
+        }
+        userMap.put("roleIds", roleIdStrings);
         if (user.getCreateTime() != null) {
             userMap.put("createTime", user.getCreateTime().format(formatter));
         }

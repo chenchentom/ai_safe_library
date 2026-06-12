@@ -3,6 +3,7 @@ package com.aisafe.system.controller;
 import com.aisafe.common.result.R;
 import com.aisafe.system.entity.BizTagCategory;
 import com.aisafe.system.service.ITagCategoryService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -41,6 +42,15 @@ public class TagCategoryController {
         List<BizTagCategory> list = tagService.getTreeByModule(module);
         List<Map<String, Object>> tree = buildTree(list);
         return R.ok(tree);
+    }
+
+    /**
+     * 导出标签 Excel
+     * GET /api/system/tag/export?module=risk_clue
+     */
+    @GetMapping("/export")
+    public void export(@RequestParam(defaultValue = "risk_clue") String module, HttpServletResponse response) {
+        tagService.exportExcel(response, module);
     }
 
     /**

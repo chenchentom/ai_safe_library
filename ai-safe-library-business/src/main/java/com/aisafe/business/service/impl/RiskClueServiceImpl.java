@@ -4,6 +4,8 @@ import com.aisafe.business.document.BizRiskClue;
 import com.aisafe.business.dto.RiskClueSearchQuery;
 import com.aisafe.business.repository.BizRiskClueRepository;
 import com.aisafe.business.service.RiskClueService;
+import com.aisafe.common.enums.BusinessType;
+import com.aisafe.system.service.AuditLogService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -39,11 +41,14 @@ public class RiskClueServiceImpl implements RiskClueService {
 
     private final BizRiskClueRepository bizRiskClueRepository;
     private final ElasticsearchOperations elasticsearchOperations;
+    private final AuditLogService auditLogService;
 
     public RiskClueServiceImpl(BizRiskClueRepository bizRiskClueRepository,
-                               ElasticsearchOperations elasticsearchOperations) {
+                               ElasticsearchOperations elasticsearchOperations,
+                               AuditLogService auditLogService) {
         this.bizRiskClueRepository = bizRiskClueRepository;
         this.elasticsearchOperations = elasticsearchOperations;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -416,6 +421,14 @@ public class RiskClueServiceImpl implements RiskClueService {
         if (clue.getAuditStatus() != null && clue.getAuditStatus() == 20) {
             throw new com.aisafe.common.exception.BusinessException("已审核的数据不可删除");
         }
+        auditLogService.recordOperSuccess(
+                "删除风险线索",
+                BusinessType.DELETE,
+                "RiskClueServiceImpl.deleteById",
+                auditLogService.buildClueSnapshot(
+                        clue.getId(),
+                        clue.getTitle() != null ? clue.getTitle() : clue.getRiskDescription(),
+                        clue.getAuditStatus()));
         bizRiskClueRepository.deleteById(id.trim());
     }
 

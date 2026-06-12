@@ -33,6 +33,9 @@ public class SecurityEventController {
             @RequestParam(required = false) String sourceWebsite,
             @RequestParam(required = false) String operatingEntityHuman,
             @RequestParam(required = false) String productsComponentsServices,
+            @RequestParam(required = false) String submissionChannel,
+            @RequestParam(required = false) String submitUserName,
+            @RequestParam(required = false) String submitOrgName,
             @RequestParam(required = false) String auditUserName,
             @RequestParam(required = false) String auditStartTime,
             @RequestParam(required = false) String auditEndTime,
@@ -41,8 +44,8 @@ public class SecurityEventController {
 
         RiskClueSearchQuery query = buildEventQuery(
                 keyword, auditRiskCategory, sourceWebsite, operatingEntityHuman,
-                productsComponentsServices, auditUserName, auditStartTime, auditEndTime,
-                page, size);
+                productsComponentsServices, submissionChannel, submitUserName, submitOrgName,
+                auditUserName, auditStartTime, auditEndTime, page, size);
         return R.ok(riskClueService.search(query));
     }
 
@@ -57,6 +60,9 @@ public class SecurityEventController {
                 (String) body.get("sourceWebsite"),
                 (String) body.get("operatingEntityHuman"),
                 (String) body.get("productsComponentsServices"),
+                (String) body.get("submissionChannel"),
+                (String) body.get("submitUserName"),
+                (String) body.get("submitOrgName"),
                 (String) body.get("auditUserName"),
                 (String) body.get("auditStartTime"),
                 (String) body.get("auditEndTime"),
@@ -106,6 +112,9 @@ public class SecurityEventController {
             String sourceWebsite,
             String operatingEntityHuman,
             String productsComponentsServices,
+            String submissionChannel,
+            String submitUserName,
+            String submitOrgName,
             String auditUserName,
             String auditStartTime,
             String auditEndTime,
@@ -120,6 +129,9 @@ public class SecurityEventController {
         query.setSourceWebsite(sourceWebsite);
         query.setOperatingEntityHuman(operatingEntityHuman);
         query.setProductsComponentsServices(productsComponentsServices);
+        query.setSubmissionChannel(submissionChannel);
+        query.setSubmitUserName(submitUserName);
+        query.setSubmitOrgName(submitOrgName);
         query.setAuditUserName(auditUserName);
         query.setAuditStartTime(auditStartTime);
         query.setAuditEndTime(auditEndTime);

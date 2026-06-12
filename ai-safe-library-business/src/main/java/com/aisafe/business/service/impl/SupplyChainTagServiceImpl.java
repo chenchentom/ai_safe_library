@@ -3,6 +3,8 @@ package com.aisafe.business.service.impl;
 import com.aisafe.business.entity.BizSupplyChainTag;
 import com.aisafe.business.mapper.BizSupplyChainTagMapper;
 import com.aisafe.business.service.ISupplyChainTagService;
+import com.aisafe.common.enums.BusinessType;
+import com.aisafe.system.service.AuditLogService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.slf4j.Logger;
@@ -10,13 +12,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SupplyChainTagServiceImpl extends ServiceImpl<BizSupplyChainTagMapper, BizSupplyChainTag>
         implements ISupplyChainTagService {
 
     private static final Logger log = LoggerFactory.getLogger(SupplyChainTagServiceImpl.class);
+
+    private final AuditLogService auditLogService;
+
+    public SupplyChainTagServiceImpl(AuditLogService auditLogService) {
+        this.auditLogService = auditLogService;
+    }
 
     @Override
     public List<BizSupplyChainTag> getTree() {
@@ -105,6 +115,12 @@ public class SupplyChainTagServiceImpl extends ServiceImpl<BizSupplyChainTagMapp
         }
         baseMapper.deleteById(id);
 
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", id);
+        snapshot.put("tagName", node.getTagName());
+        snapshot.put("cascadeCount", children.size());
+        auditLogService.recordOperSuccess(
+                "删除供应链标签(旧版)", BusinessType.DELETE, "SupplyChainTagServiceImpl.delete", snapshot);
         log.info("删除供应链标签: id={}, name={}, 级联删除 {} 个子节点", id, node.getTagName(), children.size());
     }
 

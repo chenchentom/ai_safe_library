@@ -54,6 +54,15 @@ aisafe:
     base-dir: /Volumes/mac/code/java/ai_safe_library/ai-file
     risk-report-template-path: /Volumes/mac/code/java/ai_safe_library/ai-file/数据模版.xlsx
 
+# ---- 开发环境：控制台输出 SQL ----
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# ---- Sa-Token（开发默认密钥，勿用于生产） ----
+sa-token:
+  jwt-secret-key: AiSafeLibrary2026SecretKeyForJWT
+
 # ---- 开发环境专属日志 ----
 logging:
   level:

@@ -4,6 +4,9 @@ import cn.hutool.core.util.StrUtil;
 import com.aisafe.business.entity.BizSupplyChainTagV2;
 import com.aisafe.business.mapper.BizSupplyChainTagV2Mapper;
 import com.aisafe.business.service.ISupplyChainTagV2Service;
+import com.aisafe.common.enums.BusinessType;
+import com.aisafe.system.service.AuditLogService;
+import com.aisafe.system.util.TagTreeExcelExporter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.slf4j.Logger;
@@ -11,13 +14,25 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SupplyChainTagV2ServiceImpl extends ServiceImpl<BizSupplyChainTagV2Mapper, BizSupplyChainTagV2>
         implements ISupplyChainTagV2Service {
 
     private static final Logger log = LoggerFactory.getLogger(SupplyChainTagV2ServiceImpl.class);
+
+    private final AuditLogService auditLogService;
+
+    public SupplyChainTagV2ServiceImpl(AuditLogService auditLogService) {
+        this.auditLogService = auditLogService;
+    }
 
     @Override
     public List<BizSupplyChainTagV2> getTree() {
@@ -108,6 +123,12 @@ public class SupplyChainTagV2ServiceImpl extends ServiceImpl<BizSupplyChainTagV2
         }
         baseMapper.deleteById(id);
 
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", id);
+        snapshot.put("tagName", node.getTagName());
+        snapshot.put("cascadeCount", children.size());
+        auditLogService.recordOperSuccess(
+                "删除供应链标签", BusinessType.DELETE, "SupplyChainTagV2ServiceImpl.delete", snapshot);
         log.info("删除供应链标签1.0: id={}, name={}, 级联删除 {} 个子节点", id, node.getTagName(), children.size());
     }
 
@@ -129,6 +150,41 @@ public class SupplyChainTagV2ServiceImpl extends ServiceImpl<BizSupplyChainTagV2
         }
         node.setSortOrder(newSortOrder);
         baseMapper.updateById(node);
+    }
+
+    @Override
+    public void exportExcel(HttpServletResponse response) {
+        List<BizSupplyChainTagV2> list = getTree();
+        Map<Long, String> nameById = new HashMap<>();
+        for (BizSupplyChainTagV2 tag : list) {
+            nameById.put(tag.getId(), tag.getTagName());
+        }
+
+        List<TagTreeExcelExporter.TagExcelRow> rows = new ArrayList<>();
+        for (BizSupplyChainTagV2 tag : list) {
+            String parentName = "";
+            if (tag.getParentId() != null && tag.getParentId() > 0) {
+                parentName = StrUtil.blankToDefault(tag.getParentName(), nameById.getOrDefault(tag.getParentId(), ""));
+            }
+            rows.add(new TagTreeExcelExporter.TagExcelRow(
+                    String.valueOf(tag.getId()),
+                    parentName,
+                    tag.getTagName(),
+                    tag.getTagCode(),
+                    tag.getTagLevel(),
+                    tag.getTagPath(),
+                    tag.getSortOrder(),
+                    tag.getStatus(),
+                    tag.getDescription(),
+                    tag.getIcon(),
+                    tag.getModule()));
+        }
+
+        try {
+            TagTreeExcelExporter.write(response, "供应链标签.xlsx", rows);
+        } catch (IOException e) {
+            throw new IllegalStateException("导出供应链标签 Excel 失败: " + e.getMessage(), e);
+        }
     }
 
     private void assertTagCodeAvailable(String module, String tagCode) {

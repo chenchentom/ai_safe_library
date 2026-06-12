@@ -4,8 +4,9 @@ import java.util.List;
 
 public class DeptSaveRequest {
 
-    private Long deptId;
-    private Long parentId;
+    /** 字符串形式，避免前端 JS 对大整数雪花 ID 精度丢失 */
+    private String deptId;
+    private String parentId;
     private String deptName;
     private Integer orderNum;
     private String leader;
@@ -14,10 +15,10 @@ public class DeptSaveRequest {
     private String status;
     private List<Long> roleIds;
 
-    public Long getDeptId() { return deptId; }
-    public void setDeptId(Long deptId) { this.deptId = deptId; }
-    public Long getParentId() { return parentId; }
-    public void setParentId(Long parentId) { this.parentId = parentId; }
+    public String getDeptId() { return deptId; }
+    public void setDeptId(String deptId) { this.deptId = deptId; }
+    public String getParentId() { return parentId; }
+    public void setParentId(String parentId) { this.parentId = parentId; }
     public String getDeptName() { return deptName; }
     public void setDeptName(String deptName) { this.deptName = deptName; }
     public Integer getOrderNum() { return orderNum; }

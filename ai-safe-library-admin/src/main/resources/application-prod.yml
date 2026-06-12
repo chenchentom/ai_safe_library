@@ -1,0 +1,66 @@
+# =====================================================
+# AI安全事件库 — 生产环境配置
+# 激活方式（任选其一）:
+#   java -jar xxx.jar --spring.profiles.active=prod
+#   export SPRING_PROFILES_ACTIVE=prod
+# 敏感项建议通过环境变量注入，勿将真实密码提交到仓库
+# =====================================================
+
+spring:
+  # ---- MySQL 数据源 ----
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_safe_library?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=true
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+
+  # ---- Redis 缓存 ----
+  data:
+    redis:
+      host: localhost
+      port: 6380
+      password: 
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 8
+
+  # ---- Elasticsearch ----
+  elasticsearch:
+    uris: https:localhost:9200
+    username: elastic
+    password: aisafe2026
+    connection-timeout: 10s
+    socket-timeout: 30s
+
+# ---- 平台文件路径（部署前请在服务器创建目录并赋权） ----
+# 建议目录结构:
+#   /data/ai-safe/files/       风险报送等上传文件（按部门/月份归档）
+#   /data/ai-safe/templates/   批量导入 Excel 模板
+aisafe:
+  file:
+    base-dir: /home/ycc/ai-safe/ai-file
+    risk-report-template-path: /home/ycc/ai-safe/templates/数据模版.xlsx
+
+# ---- 生产环境日志（级别分文件见 logback-spring.xml） ----
+logging:
+  level:
+    root: info
+    com.aisafe: info
+  file:
+    path: ${LOG_PATH:/home/ycc/ai-safe/logs}
+
+# ---- MyBatis：关闭控制台 SQL 输出 ----
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# ---- Sa-Token（与 dev 环境相同，便于部署；如需隔离可设置环境变量 AISAFE_JWT_SECRET 覆盖） ----
+sa-token:
+  jwt-secret-key: AiSafeLibrary2026SecretKeyForJWT
