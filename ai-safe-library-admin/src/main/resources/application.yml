@@ -1,7 +1,8 @@
 # =====================================================
 # AI安全事件库 — 主配置文件
-# 优先级: application-dev.yml > application.yml
-# 激活方式: spring.profiles.active=dev
+# 优先级: application-{profile}.yml > application.yml
+# 本地开发: spring.profiles.active=dev（默认）
+# 正式部署: spring.profiles.active=prod（见 application-prod.yml）
 # =====================================================
 
 server:
@@ -34,10 +35,7 @@ mybatis-plus:
       logic-not-delete-value: "0" # 未删除
   # 实体类包路径 (用于 TypeAlias)
   type-aliases-package: com.aisafe.**.entity
-  # 配置输出 (生产环境建议关闭)
-  configuration:
-    # SQL 日志 (dev 环境开启，方便调试)
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # SQL 日志由各 profile 配置（dev 开启，prod 关闭）
 
 # ---- Sa-Token 配置 ----
 sa-token:
@@ -51,11 +49,6 @@ sa-token:
   is-concurrent: true
   # Token 风格: 从请求头读取
   is-read-header: true
-  # JWT 密钥 (生产环境务必更换为复杂随机字符串)
-  jwt-secret-key: AiSafeLibrary2026SecretKeyForJWT
+  # JWT 密钥由 dev/prod profile 覆盖（生产请用环境变量 AISAFE_JWT_SECRET）
 
-# ---- 平台文件路径（各环境 profile 可覆盖） ----
-aisafe:
-  file:
-    base-dir: /data/ai-safe/files
-    risk-report-template-path: /data/ai-safe/templates/数据模版.xlsx
+# ---- 平台文件路径（由 dev/prod profile 覆盖） ----

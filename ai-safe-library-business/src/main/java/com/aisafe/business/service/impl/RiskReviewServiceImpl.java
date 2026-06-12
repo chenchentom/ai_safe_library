@@ -9,7 +9,9 @@ import com.aisafe.business.repository.BizRiskClueRepository;
 import com.aisafe.business.repository.BizRiskReviewRecordRepository;
 import com.aisafe.business.service.RiskClueService;
 import com.aisafe.business.service.RiskReviewService;
+import com.aisafe.common.enums.BusinessType;
 import com.aisafe.common.exception.BusinessException;
+import com.aisafe.system.service.AuditLogService;
 import com.aisafe.system.entity.SysDept;
 import com.aisafe.system.entity.SysUser;
 import com.aisafe.system.service.ISysDeptService;
@@ -29,8 +31,11 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -53,19 +58,22 @@ public class RiskReviewServiceImpl implements RiskReviewService {
     private final ISysUserService userService;
     private final ISysDeptService deptService;
     private final RiskClueService riskClueService;
+    private final AuditLogService auditLogService;
 
     public RiskReviewServiceImpl(BizRiskClueRepository bizRiskClueRepository,
                                  BizRiskReviewRecordRepository bizRiskReviewRecordRepository,
                                  ElasticsearchOperations elasticsearchOperations,
                                  ISysUserService userService,
                                  ISysDeptService deptService,
-                                 RiskClueService riskClueService) {
+                                 RiskClueService riskClueService,
+                                 AuditLogService auditLogService) {
         this.bizRiskClueRepository = bizRiskClueRepository;
         this.bizRiskReviewRecordRepository = bizRiskReviewRecordRepository;
         this.elasticsearchOperations = elasticsearchOperations;
         this.userService = userService;
         this.deptService = deptService;
         this.riskClueService = riskClueService;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -100,6 +108,13 @@ public class RiskReviewServiceImpl implements RiskReviewService {
 
         updateClueAfterReview(dto.getClueId(), dto, reviewerName, deptName, auditTime);
         saveReviewRecord(record);
+
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("clueId", dto.getClueId());
+        snapshot.put("isWarehouse", normalizeWarehouse(dto.getIsWarehouse()));
+        snapshot.put("riskCategory", trimToNull(dto.getRiskCategory()));
+        auditLogService.recordOperSuccess(
+                "审核风险线索", BusinessType.REVIEW, "RiskReviewServiceImpl.review", snapshot);
         logger.info("审核完成 clueId={} reviewer={}", dto.getClueId(), reviewerName);
     }
 
@@ -126,6 +141,7 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         int success = 0;
         int failed = 0;
         List<BatchReviewResult.FailureItem> failures = new ArrayList<>();
+        Set<String> processedIds = new HashSet<>();
 
         while (true) {
             Map<String, Object> pageResult = riskClueService.search(searchQuery);
@@ -134,7 +150,28 @@ public class RiskReviewServiceImpl implements RiskReviewService {
                 break;
             }
 
+            List<BizRiskClue> pendingRows = new ArrayList<>();
             for (BizRiskClue clue : rows) {
+                if (clue == null || !hasText(clue.getId())) {
+                    continue;
+                }
+                if (processedIds.contains(clue.getId())) {
+                    continue;
+                }
+                if (clue.getAuditStatus() != null && clue.getAuditStatus() != 10) {
+                    processedIds.add(clue.getId());
+                    continue;
+                }
+                pendingRows.add(clue);
+            }
+
+            // ES 近实时索引未刷新时，可能反复返回同一页；无新线索则结束，避免重复审核
+            if (pendingRows.isEmpty()) {
+                break;
+            }
+
+            for (BizRiskClue clue : pendingRows) {
+                processedIds.add(clue.getId());
                 ReviewDTO dto = buildAutoReviewFromClue(clue, warehouseDecision);
                 String validationError = validateAutoReview(dto);
                 if (validationError != null) {
@@ -157,6 +194,14 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         result.setSuccess(success);
         result.setFailed(failed);
         result.setFailures(failures);
+
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("total", result.getTotal());
+        snapshot.put("success", success);
+        snapshot.put("failed", failed);
+        snapshot.put("isWarehouse", warehouseDecision);
+        auditLogService.recordOperSuccess(
+                "批量审核风险线索", BusinessType.REVIEW, "RiskReviewServiceImpl.batchReviewByQuery", snapshot);
         logger.info("批量审核完成 total={} success={} failed={}", result.getTotal(), success, failed);
         return result;
     }

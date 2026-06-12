@@ -1,9 +1,11 @@
 package com.aisafe.system.service.impl;
 
+import com.aisafe.common.enums.BusinessType;
 import com.aisafe.common.exception.BusinessException;
 import com.aisafe.system.dto.RoleSaveRequest;
 import com.aisafe.system.entity.*;
 import com.aisafe.system.mapper.*;
+import com.aisafe.system.service.AuditLogService;
 import com.aisafe.system.service.SysPermissionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
@@ -23,17 +25,20 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysDeptRoleMapper deptRoleMapper;
+    private final AuditLogService auditLogService;
 
     public SysPermissionServiceImpl(SysRoleMapper roleMapper,
                                     SysMenuMapper menuMapper,
                                     SysRoleMenuMapper roleMenuMapper,
                                     SysUserRoleMapper userRoleMapper,
-                                    SysDeptRoleMapper deptRoleMapper) {
+                                    SysDeptRoleMapper deptRoleMapper,
+                                    AuditLogService auditLogService) {
         this.roleMapper = roleMapper;
         this.menuMapper = menuMapper;
         this.roleMenuMapper = roleMenuMapper;
         this.userRoleMapper = userRoleMapper;
         this.deptRoleMapper = deptRoleMapper;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -268,10 +273,21 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRole(Long roleId) {
+        SysRole role = roleMapper.selectById(roleId);
+        if (role == null) {
+            throw new BusinessException("角色不存在");
+        }
         roleMapper.deleteById(roleId);
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, roleId));
         deptRoleMapper.delete(new LambdaQueryWrapper<SysDeptRole>().eq(SysDeptRole::getRoleId, roleId));
+
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("roleId", roleId);
+        snapshot.put("roleName", role.getRoleName());
+        snapshot.put("roleKey", role.getRoleKey());
+        auditLogService.recordOperSuccess(
+                "删除角色", BusinessType.DELETE, "SysPermissionServiceImpl.deleteRole", snapshot);
     }
 
     @Override

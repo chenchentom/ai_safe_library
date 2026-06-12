@@ -4,6 +4,7 @@ import com.aisafe.business.entity.BizSupplyChainTagV2;
 import com.aisafe.business.service.ISupplyChainTagV2Service;
 import com.aisafe.common.result.R;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -81,6 +82,15 @@ public class SupplyChainTagV2Controller {
         } catch (IllegalArgumentException e) {
             return R.fail(e.getMessage());
         }
+    }
+
+    /**
+     * 导出供应链标签 Excel
+     * GET /api/biz/supply-chain-tag-v2/export
+     */
+    @GetMapping("/export")
+    public void export(HttpServletResponse response) {
+        tagService.exportExcel(response);
     }
 
     private List<Map<String, Object>> buildTree(List<BizSupplyChainTagV2> list) {

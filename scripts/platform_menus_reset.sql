@@ -32,7 +32,9 @@ VALUES
 (1300, 0, '系统管理', 'M', '', NULL, NULL, 'Setting', 30, '0', '0', '0', NOW()),
 (1301, 1300, '用户管理', 'C', '/system/user', NULL, 'system:user:list', 'User', 1, '0', '0', '0', NOW()),
 (1302, 1300, '部门管理', 'C', '/system/dept', NULL, 'system:dept:list', 'OfficeBuilding', 2, '0', '0', '0', NOW()),
-(1303, 1300, '角色管理', 'C', '/system/role', NULL, 'system:role:list', 'UserFilled', 3, '0', '0', '0', NOW())
+(1303, 1300, '角色管理', 'C', '/system/role', NULL, 'system:role:list', 'UserFilled', 3, '0', '0', '0', NOW()),
+(1304, 1300, '操作日志', 'C', '/system/oper-log', NULL, 'system:oper-log:list', 'Document', 4, '0', '0', '0', NOW()),
+(1305, 1300, '登录日志', 'C', '/system/login-info', NULL, 'system:login-info:list', 'Key', 5, '0', '0', '0', NOW())
 ON DUPLICATE KEY UPDATE
   `parent_id` = VALUES(`parent_id`),
   `menu_name` = VALUES(`menu_name`),

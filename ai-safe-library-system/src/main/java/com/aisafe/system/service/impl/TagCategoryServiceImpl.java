@@ -1,9 +1,12 @@
 package com.aisafe.system.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.aisafe.common.enums.BusinessType;
 import com.aisafe.system.entity.BizTagCategory;
 import com.aisafe.system.mapper.BizTagCategoryMapper;
+import com.aisafe.system.service.AuditLogService;
 import com.aisafe.system.service.ITagCategoryService;
+import com.aisafe.system.util.TagTreeExcelExporter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.slf4j.Logger;
@@ -12,12 +15,14 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 分类标签 Service 实现
@@ -32,6 +37,12 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
         implements ITagCategoryService {
 
     private static final Logger log = LoggerFactory.getLogger(TagCategoryServiceImpl.class);
+
+    private final AuditLogService auditLogService;
+
+    public TagCategoryServiceImpl(AuditLogService auditLogService) {
+        this.auditLogService = auditLogService;
+    }
 
     @Override
     @Cacheable(value = "tag:tree", key = "#module")
@@ -131,6 +142,13 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
         }
 
         baseMapper.deleteBatchIds(idsToDelete);
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", id);
+        snapshot.put("tagName", node.getTagName());
+        snapshot.put("module", node.getModule());
+        snapshot.put("cascadeCount", children.size());
+        auditLogService.recordOperSuccess(
+                "删除分类标签", BusinessType.DELETE, "TagCategoryServiceImpl.delete", snapshot);
         log.info("删除标签: id={}, name={}, 级联删除 {} 个子节点", id, node.getTagName(), children.size());
     }
 
@@ -163,19 +181,50 @@ public class TagCategoryServiceImpl extends ServiceImpl<BizTagCategoryMapper, Bi
         }
     }
 
-    // ==================== Excel 导入导出 (骨架) ====================
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "tag:tree", allEntries = true)
-    public void importExcel(MultipartFile file) {
-        // TODO: 实现 POI Excel 导入
-        throw new UnsupportedOperationException("Excel 导入功能开发中");
-    }
-
     @Override
     public void exportExcel(HttpServletResponse response, String module) {
-        // TODO: 实现 POI Excel 导出
-        throw new UnsupportedOperationException("Excel 导出功能开发中");
+        String resolvedModule = StrUtil.isBlank(module) ? "risk_clue" : module.trim();
+        List<BizTagCategory> list = getTreeByModule(resolvedModule);
+        Map<Long, String> nameById = new HashMap<>();
+        for (BizTagCategory tag : list) {
+            nameById.put(tag.getId(), tag.getTagName());
+        }
+
+        List<TagTreeExcelExporter.TagExcelRow> rows = new ArrayList<>();
+        for (BizTagCategory tag : list) {
+            String parentName = "";
+            if (tag.getParentId() != null && tag.getParentId() > 0) {
+                parentName = nameById.getOrDefault(tag.getParentId(), "");
+            }
+            rows.add(new TagTreeExcelExporter.TagExcelRow(
+                    String.valueOf(tag.getId()),
+                    parentName,
+                    tag.getTagName(),
+                    tag.getTagCode(),
+                    tag.getTagLevel(),
+                    tag.getTagPath(),
+                    tag.getSortOrder(),
+                    tag.getStatus(),
+                    tag.getDescription(),
+                    tag.getIcon(),
+                    tag.getModule()));
+        }
+
+        String fileName = moduleExportFileName(resolvedModule);
+        try {
+            TagTreeExcelExporter.write(response, fileName, rows);
+        } catch (IOException e) {
+            throw new IllegalStateException("导出标签 Excel 失败: " + e.getMessage(), e);
+        }
+    }
+
+    private String moduleExportFileName(String module) {
+        if ("supply_chain".equals(module)) {
+            return "供应链标签.xlsx";
+        }
+        if ("malicious_skill".equals(module)) {
+            return "恶意Skill标签.xlsx";
+        }
+        return "风险线索标签.xlsx";
     }
 }

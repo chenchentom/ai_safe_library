@@ -2,13 +2,16 @@ package com.aisafe.system.controller;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
+import com.aisafe.common.exception.BusinessException;
 import com.aisafe.common.result.R;
 import com.aisafe.system.dto.LoginBody;
 import com.aisafe.system.entity.SysDept;
 import com.aisafe.system.entity.SysUser;
+import com.aisafe.system.service.AuditLogService;
 import com.aisafe.system.service.ISysDeptService;
 import com.aisafe.system.service.LoginService;
 import com.aisafe.system.service.SysPermissionService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,19 +26,28 @@ public class AuthController {
     private final LoginService loginService;
     private final ISysDeptService deptService;
     private final SysPermissionService permissionService;
+    private final AuditLogService auditLogService;
 
     public AuthController(LoginService loginService,
                           ISysDeptService deptService,
-                          SysPermissionService permissionService) {
+                          SysPermissionService permissionService,
+                          AuditLogService auditLogService) {
         this.loginService = loginService;
         this.deptService = deptService;
         this.permissionService = permissionService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping("/login")
-    public R<SaTokenInfo> login(@Valid @RequestBody LoginBody body) {
-        SaTokenInfo tokenInfo = loginService.login(body);
-        return R.ok("登录成功", tokenInfo);
+    public R<SaTokenInfo> login(@Valid @RequestBody LoginBody body, HttpServletRequest request) {
+        try {
+            SaTokenInfo tokenInfo = loginService.login(body);
+            auditLogService.recordLogin(body.getUsername(), true, "登录成功", request);
+            return R.ok("登录成功", tokenInfo);
+        } catch (BusinessException ex) {
+            auditLogService.recordLogin(body.getUsername(), false, ex.getMessage(), request);
+            throw ex;
+        }
     }
 
     @PostMapping("/logout")

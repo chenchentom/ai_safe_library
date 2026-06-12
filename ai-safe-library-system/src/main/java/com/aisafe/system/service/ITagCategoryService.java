@@ -2,7 +2,6 @@ package com.aisafe.system.service;
 
 import com.aisafe.system.entity.BizTagCategory;
 import com.baomidou.mybatisplus.extension.service.IService;
-import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -41,11 +40,6 @@ public interface ITagCategoryService extends IService<BizTagCategory> {
      * 更新排序号
      */
     void updateSortOrder(Long id, Integer newSortOrder);
-
-    /**
-     * Excel 导入
-     */
-    void importExcel(MultipartFile file);
 
     /**
      * Excel 导出

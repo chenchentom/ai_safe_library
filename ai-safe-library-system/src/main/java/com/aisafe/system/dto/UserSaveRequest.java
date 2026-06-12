@@ -4,10 +4,12 @@ import java.util.List;
 
 public class UserSaveRequest {
 
-    private Long userId;
+    /** 字符串形式，避免前端 JS 对大整数雪花 ID 精度丢失 */
+    private String userId;
     private String userName;
     private String nickName;
-    private Long deptId;
+    /** 字符串形式，避免前端 JS 对大整数雪花 ID 精度丢失 */
+    private String deptId;
     private String phonenumber;
     private String email;
     private String status;
@@ -15,14 +17,14 @@ public class UserSaveRequest {
     private String password;
     private List<Long> roleIds;
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
     public String getNickName() { return nickName; }
     public void setNickName(String nickName) { this.nickName = nickName; }
-    public Long getDeptId() { return deptId; }
-    public void setDeptId(Long deptId) { this.deptId = deptId; }
+    public String getDeptId() { return deptId; }
+    public void setDeptId(String deptId) { this.deptId = deptId; }
     public String getPhonenumber() { return phonenumber; }
     public void setPhonenumber(String phonenumber) { this.phonenumber = phonenumber; }
     public String getEmail() { return email; }
