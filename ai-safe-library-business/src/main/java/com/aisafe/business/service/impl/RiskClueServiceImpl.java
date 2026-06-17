@@ -3,9 +3,11 @@ package com.aisafe.business.service.impl;
 import com.aisafe.business.document.BizRiskClue;
 import com.aisafe.business.dto.RiskClueSearchQuery;
 import com.aisafe.business.repository.BizRiskClueRepository;
+import com.aisafe.business.service.ClueAttachmentService;
 import com.aisafe.business.service.RiskClueService;
 import com.aisafe.common.enums.BusinessType;
 import com.aisafe.system.service.AuditLogService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -41,13 +43,16 @@ public class RiskClueServiceImpl implements RiskClueService {
 
     private final BizRiskClueRepository bizRiskClueRepository;
     private final ElasticsearchOperations elasticsearchOperations;
+    private final ClueAttachmentService clueAttachmentService;
     private final AuditLogService auditLogService;
 
     public RiskClueServiceImpl(BizRiskClueRepository bizRiskClueRepository,
                                ElasticsearchOperations elasticsearchOperations,
+                               @Lazy ClueAttachmentService clueAttachmentService,
                                AuditLogService auditLogService) {
         this.bizRiskClueRepository = bizRiskClueRepository;
         this.elasticsearchOperations = elasticsearchOperations;
+        this.clueAttachmentService = clueAttachmentService;
         this.auditLogService = auditLogService;
     }
 
@@ -79,6 +84,8 @@ public class RiskClueServiceImpl implements RiskClueService {
             if (searchQuery.getIsWarehouse() != null) {
                 addWarehouseFilter(b, searchQuery.getIsWarehouse());
             }
+
+            addNotDeletedFilter(b);
 
             addRiskCategoryFilter(b, searchQuery.getAuditRiskCategory(), "class_human_1", "class_human_2", "class_human_list");
             addKeywordLikeFilter(b, "operating_entity_human", searchQuery.getOperatingEntityHuman());
@@ -120,6 +127,9 @@ public class RiskClueServiceImpl implements RiskClueService {
             if (searchQuery.getIsShared() != null) {
                 b.filter(f -> f.term(t -> t.field("is_shared").value(searchQuery.getIsShared())));
             }
+
+            addYesNoFilter(b, "is_verify", searchQuery.getIsVerify());
+            addYesNoFilter(b, "is_submit", searchQuery.getIsSubmit());
 
             addDateRangeFilter(
                     b,
@@ -429,6 +439,7 @@ public class RiskClueServiceImpl implements RiskClueService {
                         clue.getId(),
                         clue.getTitle() != null ? clue.getTitle() : clue.getRiskDescription(),
                         clue.getAuditStatus()));
+        clueAttachmentService.deleteAllByClueId(id.trim());
         bizRiskClueRepository.deleteById(id.trim());
     }
 
@@ -483,7 +494,11 @@ public class RiskClueServiceImpl implements RiskClueService {
     @Override
     public long countByReviewStatus(Integer reviewStatus) {
         NativeQuery countQuery = NativeQuery.builder()
-                .withQuery(q -> q.term(t -> t.field("audit_status").value(reviewStatus)))
+                .withQuery(q -> q.bool(b -> {
+                    addNotDeletedFilter(b);
+                    b.filter(f -> f.term(t -> t.field("audit_status").value(reviewStatus)));
+                    return b;
+                }))
                 .withMaxResults(1)
                 .build();
         SearchHits<BizRiskClue> hits = elasticsearchOperations.search(countQuery, BizRiskClue.class);
@@ -493,7 +508,10 @@ public class RiskClueServiceImpl implements RiskClueService {
     @Override
     public long countAll() {
         NativeQuery countQuery = NativeQuery.builder()
-                .withQuery(q -> q.matchAll(m -> m))
+                .withQuery(q -> q.bool(b -> {
+                    addNotDeletedFilter(b);
+                    return b;
+                }))
                 .withMaxResults(1)
                 .build();
         SearchHits<BizRiskClue> hits = elasticsearchOperations.search(countQuery, BizRiskClue.class);
@@ -512,6 +530,28 @@ public class RiskClueServiceImpl implements RiskClueService {
             return ((Number) total).longValue();
         }
         return 0L;
+    }
+
+    private void addYesNoFilter(BoolQuery.Builder b, String field, Integer value) {
+        if (value == null) {
+            return;
+        }
+        if (value == 1) {
+            b.filter(f -> f.term(t -> t.field(field).value(1)));
+        } else {
+            b.filter(f -> f.bool(n -> n
+                    .should(s -> s.term(t -> t.field(field).value(0)))
+                    .should(s -> s.bool(m -> m.mustNot(mn -> mn.exists(e -> e.field(field)))))
+                    .minimumShouldMatch("1")));
+        }
+    }
+
+    /** 排除已软删文档（deleted=1），保留 deleted=0 或未写入 deleted 的文档 */
+    private void addNotDeletedFilter(BoolQuery.Builder b) {
+        b.filter(f -> f.bool(n -> n
+                .should(s -> s.term(t -> t.field("deleted").value(0)))
+                .should(s -> s.bool(m -> m.mustNot(mn -> mn.exists(e -> e.field("deleted")))))
+                .minimumShouldMatch("1")));
     }
 
     /**

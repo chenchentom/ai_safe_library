@@ -17,6 +17,12 @@ spring:
   profiles:
     active: dev
 
+  servlet:
+    multipart:
+      # 与 ClueReportFileStorage 一致：单文件/ZIP 最大 200MB，整次请求留余量
+      max-file-size: 200MB
+      max-request-size: 220MB
+
   # Jackson 全局日期格式
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss

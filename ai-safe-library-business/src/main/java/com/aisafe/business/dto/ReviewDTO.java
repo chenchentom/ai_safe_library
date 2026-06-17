@@ -22,6 +22,12 @@ public class ReviewDTO {
     /** 审核备注 */
     private String reviewComment;
 
+    /** 是否验证：0=否，1=是；不传则不更新 */
+    private Integer isVerify;
+
+    /** 是否报送：0=否，1=是；不传则不更新 */
+    private Integer isSubmit;
+
     public String getClueId() { return clueId; }
     public void setClueId(String clueId) { this.clueId = clueId; }
 
@@ -43,4 +49,10 @@ public class ReviewDTO {
 
     public String getReviewComment() { return reviewComment; }
     public void setReviewComment(String reviewComment) { this.reviewComment = reviewComment; }
+
+    public Integer getIsVerify() { return isVerify; }
+    public void setIsVerify(Integer isVerify) { this.isVerify = isVerify; }
+
+    public Integer getIsSubmit() { return isSubmit; }
+    public void setIsSubmit(Integer isSubmit) { this.isSubmit = isSubmit; }
 }

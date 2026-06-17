@@ -6,13 +6,11 @@ import com.aisafe.business.dto.RiskClueSearchQuery;
 import com.aisafe.business.service.RiskClueManualService;
 import com.aisafe.business.service.RiskReportService;
 import com.aisafe.business.service.RiskReportUploadService;
+import com.aisafe.business.support.ReportDeptSupport;
 import com.aisafe.business.support.RiskClueSearchSupport;
 import com.aisafe.common.result.R;
-import com.aisafe.system.entity.SysDept;
 import com.aisafe.system.entity.SysUser;
-import com.aisafe.system.service.ISysDeptService;
 import com.aisafe.system.service.ISysUserService;
-import com.aisafe.system.service.SysPermissionService;
 import cn.dev33.satoken.stp.StpUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -28,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -41,8 +40,7 @@ public class RiskReportController {
     private final RiskReportUploadService uploadService;
     private final RiskClueManualService riskClueManualService;
     private final ISysUserService userService;
-    private final ISysDeptService deptService;
-    private final SysPermissionService permissionService;
+    private final ReportDeptSupport reportDeptSupport;
 
     @Value("${aisafe.file.risk-report-template-path:}")
     private String riskReportTemplatePath;
@@ -51,14 +49,12 @@ public class RiskReportController {
                                 RiskReportUploadService uploadService,
                                 RiskClueManualService riskClueManualService,
                                 ISysUserService userService,
-                                ISysDeptService deptService,
-                                SysPermissionService permissionService) {
+                                ReportDeptSupport reportDeptSupport) {
         this.riskReportService = riskReportService;
         this.uploadService = uploadService;
         this.riskClueManualService = riskClueManualService;
         this.userService = userService;
-        this.deptService = deptService;
-        this.permissionService = permissionService;
+        this.reportDeptSupport = reportDeptSupport;
     }
 
     /**
@@ -69,7 +65,7 @@ public class RiskReportController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        String reportUnit = getCurrentDeptName();
+        String reportUnit = reportDeptSupport.requireReportUnit(requireCurrentUser());
         Map<String, Object> result = riskReportService.getMyReports(reportUnit, page, size);
         return R.ok(result);
     }
@@ -100,25 +96,41 @@ public class RiskReportController {
             @RequestParam(required = false) String sourceType,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Object isVerify,
+            @RequestParam(required = false) Object isSubmit,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        String reportUnit = getCurrentDeptName();
+        String reportUnit = reportDeptSupport.requireReportUnit(requireCurrentUser());
         RiskClueSearchQuery query = RiskClueSearchSupport.buildSearchQuery(
                 keyword, riskCategory, reviewStatus, sourceWebsite, operatingEntity,
                 submissionChannel, productsComponentsServices, submissionStartTime, submissionEndTime,
                 isWarehouse, auditRiskCategory, operatingEntityHuman, auditUserName,
                 auditStartTime, auditEndTime, submitUserName, submitOrgName,
                 sourceType, startTime, endTime, page, size, reportUnit);
+        RiskClueSearchSupport.applyYesNoFilters(query, isVerify, isSubmit);
         return R.ok(riskReportService.search(query, reportUnit));
     }
 
     /**
-     * 编辑本部门待审核报送的基础信息
+     * 新增本部门待审核报送
+     */
+    @PostMapping
+    public R<Map<String, String>> createMyReport(@RequestBody RiskClueManualCreateDTO dto) {
+        SysUser user = requireCurrentUser();
+        String reportUnit = reportDeptSupport.requireReportUnit(user);
+        String id = riskClueManualService.createReport(dto, reportUnit);
+        Map<String, String> result = new HashMap<>();
+        result.put("id", id);
+        return R.ok(result);
+    }
+
+    /**
+     * 编辑本部门报送的基础信息（待审核/已审核）
      */
     @PutMapping("/{id}")
     public R<String> updateMyReport(@PathVariable String id, @RequestBody RiskClueManualCreateDTO dto) {
-        String reportUnit = getCurrentDeptName();
+        String reportUnit = reportDeptSupport.requireReportUnit(requireCurrentUser());
         riskClueManualService.updatePendingReport(id, dto, reportUnit);
         return R.ok("更新成功");
     }
@@ -149,13 +161,36 @@ public class RiskReportController {
     }
 
     /**
+     * 校验 Excel + 可选 ZIP 匹配（不落库）
+     */
+    @PostMapping("/upload/preview")
+    public R<Map<String, Object>> previewUpload(
+            @RequestParam("excel") MultipartFile excel,
+            @RequestParam(value = "zip", required = false) MultipartFile zip) {
+        SysUser user = requireCurrentUser();
+        String reportUnit = reportDeptSupport.requireReportUnit(user);
+        return R.ok(uploadService.previewUpload(excel, zip, user, reportUnit));
+    }
+
+    /**
+     * 确认批量导入
+     */
+    @PostMapping("/upload/confirm")
+    public R<Map<String, Object>> confirmUpload(@RequestParam("previewToken") String previewToken) {
+        SysUser user = requireCurrentUser();
+        String reportUnit = reportDeptSupport.requireReportUnit(user);
+        return R.ok(uploadService.confirmUpload(previewToken, user, reportUnit));
+    }
+
+    /**
      * 上传 Excel 批量导入报送线索（异步处理，返回批次 ID 供轮询进度）
      */
     @PostMapping("/upload")
-    public R<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
+    public R<Map<String, Object>> upload(@RequestParam("file") MultipartFile file,
+                                         @RequestParam(value = "zip", required = false) MultipartFile zip) {
         SysUser user = requireCurrentUser();
-        String reportUnit = getCurrentDeptName(user);
-        return R.ok(uploadService.startUpload(file, user, reportUnit));
+        String reportUnit = reportDeptSupport.requireReportUnit(user);
+        return R.ok(uploadService.startUpload(file, zip, user, reportUnit));
     }
 
     /**
@@ -164,8 +199,8 @@ public class RiskReportController {
     @GetMapping("/upload/batches/{batchId}/progress")
     public R<Map<String, Object>> uploadProgress(@PathVariable Long batchId) {
         SysUser user = requireCurrentUser();
-        String reportUnit = getCurrentDeptName(user);
-        boolean superAdmin = permissionService.isSuperAdmin(user.getId(), user.getDeptId());
+        boolean superAdmin = reportDeptSupport.isSuperAdmin(user);
+        String reportUnit = resolveUploadReportUnit(user, superAdmin);
         return R.ok(uploadService.getProgress(batchId, user, reportUnit, superAdmin));
     }
 
@@ -182,8 +217,8 @@ public class RiskReportController {
             @RequestParam(required = false) String submitTimeStart,
             @RequestParam(required = false) String submitTimeEnd) {
         SysUser user = requireCurrentUser();
-        String reportUnit = getCurrentDeptName(user);
-        boolean superAdmin = permissionService.isSuperAdmin(user.getId(), user.getDeptId());
+        boolean superAdmin = reportDeptSupport.isSuperAdmin(user);
+        String reportUnit = resolveUploadReportUnit(user, superAdmin);
         return R.ok(uploadService.listBatches(page, size, status, keyword, submitUserName,
                 submitTimeStart, submitTimeEnd, user, reportUnit, superAdmin));
     }
@@ -194,8 +229,8 @@ public class RiskReportController {
     @GetMapping("/upload/batches/{batchId}")
     public R<Map<String, Object>> uploadBatchDetail(@PathVariable Long batchId) {
         SysUser user = requireCurrentUser();
-        String reportUnit = getCurrentDeptName(user);
-        boolean superAdmin = permissionService.isSuperAdmin(user.getId(), user.getDeptId());
+        boolean superAdmin = reportDeptSupport.isSuperAdmin(user);
+        String reportUnit = resolveUploadReportUnit(user, superAdmin);
         return R.ok(uploadService.getBatch(batchId, user, reportUnit, superAdmin));
     }
 
@@ -209,8 +244,8 @@ public class RiskReportController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         SysUser user = requireCurrentUser();
-        String reportUnit = getCurrentDeptName(user);
-        boolean superAdmin = permissionService.isSuperAdmin(user.getId(), user.getDeptId());
+        boolean superAdmin = reportDeptSupport.isSuperAdmin(user);
+        String reportUnit = resolveUploadReportUnit(user, superAdmin);
         return R.ok(uploadService.listDetails(batchId, page, size, status, user, reportUnit, superAdmin));
     }
 
@@ -219,7 +254,7 @@ public class RiskReportController {
      */
     @GetMapping("/stats")
     public R<Map<String, Object>> stats() {
-        String reportUnit = getCurrentDeptName();
+        String reportUnit = reportDeptSupport.requireReportUnit(requireCurrentUser());
         return R.ok(riskReportService.getStats(reportUnit));
     }
 
@@ -249,6 +284,8 @@ public class RiskReportController {
             @RequestParam(required = false) String sourceType,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Object isVerify,
+            @RequestParam(required = false) Object isSubmit,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -258,6 +295,7 @@ public class RiskReportController {
                 isWarehouse, auditRiskCategory, operatingEntityHuman, auditUserName,
                 auditStartTime, auditEndTime, submitUserName, submitOrgName,
                 sourceType, startTime, endTime, page, size, null);
+        RiskClueSearchSupport.applyYesNoFilters(query, isVerify, isSubmit);
         return R.ok(riskReportService.searchShared(query));
     }
 
@@ -277,20 +315,11 @@ public class RiskReportController {
         return user;
     }
 
-    /**
-     * 获取当前用户的部门名称
-     */
-    private String getCurrentDeptName() {
-        return getCurrentDeptName(requireCurrentUser());
-    }
-
-    private String getCurrentDeptName(SysUser user) {
-        if (user != null && user.getDeptId() != null) {
-            SysDept dept = deptService.getById(user.getDeptId());
-            if (dept != null) {
-                return dept.getDeptName();
-            }
+    /** 上传批次类接口：超管可不按部门过滤，普通用户必须有部门 */
+    private String resolveUploadReportUnit(SysUser user, boolean superAdmin) {
+        if (superAdmin) {
+            return reportDeptSupport.resolveDeptName(user);
         }
-        return "";
+        return reportDeptSupport.requireReportUnit(user);
     }
 }

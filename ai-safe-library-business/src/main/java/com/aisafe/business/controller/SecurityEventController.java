@@ -3,6 +3,7 @@ package com.aisafe.business.controller;
 import com.aisafe.business.document.BizRiskClue;
 import com.aisafe.business.dto.RiskClueManualCreateDTO;
 import com.aisafe.business.dto.RiskClueSearchQuery;
+import com.aisafe.business.support.RiskClueSearchSupport;
 import com.aisafe.business.service.RiskClueManualService;
 import com.aisafe.business.service.RiskClueService;
 import com.aisafe.common.result.R;
@@ -39,13 +40,15 @@ public class SecurityEventController {
             @RequestParam(required = false) String auditUserName,
             @RequestParam(required = false) String auditStartTime,
             @RequestParam(required = false) String auditEndTime,
+            @RequestParam(required = false) Object isVerify,
+            @RequestParam(required = false) Object isSubmit,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "16") int size) {
 
         RiskClueSearchQuery query = buildEventQuery(
                 keyword, auditRiskCategory, sourceWebsite, operatingEntityHuman,
                 productsComponentsServices, submissionChannel, submitUserName, submitOrgName,
-                auditUserName, auditStartTime, auditEndTime, page, size);
+                auditUserName, auditStartTime, auditEndTime, isVerify, isSubmit, page, size);
         return R.ok(riskClueService.search(query));
     }
 
@@ -66,6 +69,8 @@ public class SecurityEventController {
                 (String) body.get("auditUserName"),
                 (String) body.get("auditStartTime"),
                 (String) body.get("auditEndTime"),
+                body.get("isVerify"),
+                body.get("isSubmit"),
                 body.get("page") != null ? ((Number) body.get("page")).intValue() : 1,
                 body.get("size") != null ? ((Number) body.get("size")).intValue() : 16);
         return R.ok(riskClueService.search(query));
@@ -118,6 +123,8 @@ public class SecurityEventController {
             String auditUserName,
             String auditStartTime,
             String auditEndTime,
+            Object isVerify,
+            Object isSubmit,
             int page,
             int size) {
 
@@ -135,6 +142,7 @@ public class SecurityEventController {
         query.setAuditUserName(auditUserName);
         query.setAuditStartTime(auditStartTime);
         query.setAuditEndTime(auditEndTime);
+        RiskClueSearchSupport.applyYesNoFilters(query, isVerify, isSubmit);
         query.setSortField("audit_time");
         query.setPage(page);
         query.setSize(size);

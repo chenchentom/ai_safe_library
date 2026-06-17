@@ -19,6 +19,8 @@ public class BizRiskReportUploadDetail {
     private String status;
     private String clueId;
     private String errorMessage;
+    private String attachmentStatus;
+    private String attachmentNames;
     private LocalDateTime createTime;
 
     public Long getId() { return id; }
@@ -41,6 +43,12 @@ public class BizRiskReportUploadDetail {
 
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+    public String getAttachmentStatus() { return attachmentStatus; }
+    public void setAttachmentStatus(String attachmentStatus) { this.attachmentStatus = attachmentStatus; }
+
+    public String getAttachmentNames() { return attachmentNames; }
+    public void setAttachmentNames(String attachmentNames) { this.attachmentNames = attachmentNames; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

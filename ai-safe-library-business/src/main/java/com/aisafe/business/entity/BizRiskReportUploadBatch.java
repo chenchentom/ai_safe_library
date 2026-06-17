@@ -28,6 +28,13 @@ public class BizRiskReportUploadBatch extends BaseEntity {
     private LocalDateTime submitTime;
     private LocalDateTime finishTime;
     private String errorSummary;
+    private String zipFileName;
+    private String zipFilePath;
+    private String extractedDir;
+    private Integer reportMatchedCount;
+    private Integer reportMissingCount;
+    private Integer reportOrphanCount;
+    private String reportMatchSummary;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -76,4 +83,25 @@ public class BizRiskReportUploadBatch extends BaseEntity {
 
     public String getErrorSummary() { return errorSummary; }
     public void setErrorSummary(String errorSummary) { this.errorSummary = errorSummary; }
+
+    public String getZipFileName() { return zipFileName; }
+    public void setZipFileName(String zipFileName) { this.zipFileName = zipFileName; }
+
+    public String getZipFilePath() { return zipFilePath; }
+    public void setZipFilePath(String zipFilePath) { this.zipFilePath = zipFilePath; }
+
+    public String getExtractedDir() { return extractedDir; }
+    public void setExtractedDir(String extractedDir) { this.extractedDir = extractedDir; }
+
+    public Integer getReportMatchedCount() { return reportMatchedCount; }
+    public void setReportMatchedCount(Integer reportMatchedCount) { this.reportMatchedCount = reportMatchedCount; }
+
+    public Integer getReportMissingCount() { return reportMissingCount; }
+    public void setReportMissingCount(Integer reportMissingCount) { this.reportMissingCount = reportMissingCount; }
+
+    public Integer getReportOrphanCount() { return reportOrphanCount; }
+    public void setReportOrphanCount(Integer reportOrphanCount) { this.reportOrphanCount = reportOrphanCount; }
+
+    public String getReportMatchSummary() { return reportMatchSummary; }
+    public void setReportMatchSummary(String reportMatchSummary) { this.reportMatchSummary = reportMatchSummary; }
 }

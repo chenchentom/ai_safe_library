@@ -17,7 +17,13 @@ public class BatchReviewResult {
     /** 失败数量 */
     private int failed;
 
-    /** 失败明细（最多返回前 20 条） */
+    /** 实际处理数量（成功 + 失败） */
+    private int processedCount;
+
+    /** 失败明细是否被截断（超过返回上限） */
+    private boolean failuresTruncated;
+
+    /** 失败明细（最多返回前 100 条） */
     private List<FailureItem> failures = new ArrayList<>();
 
     public int getTotal() {
@@ -42,6 +48,22 @@ public class BatchReviewResult {
 
     public void setFailed(int failed) {
         this.failed = failed;
+    }
+
+    public int getProcessedCount() {
+        return processedCount;
+    }
+
+    public void setProcessedCount(int processedCount) {
+        this.processedCount = processedCount;
+    }
+
+    public boolean isFailuresTruncated() {
+        return failuresTruncated;
+    }
+
+    public void setFailuresTruncated(boolean failuresTruncated) {
+        this.failuresTruncated = failuresTruncated;
     }
 
     public List<FailureItem> getFailures() {

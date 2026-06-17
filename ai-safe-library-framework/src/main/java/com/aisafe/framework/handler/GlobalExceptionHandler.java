@@ -11,6 +11,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 全局异常处理器
@@ -69,6 +70,13 @@ public class GlobalExceptionHandler {
     public R<Void> handleBindException(BindException e) {
         String msg = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         return R.fail(400, msg);
+    }
+
+    /** 上传文件超过 Spring multipart 限制 */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public R<Void> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("上传文件过大: {}", e.getMessage());
+        return R.fail(400, "上传文件过大，单个文件不超过 200MB，请压缩后重试");
     }
 
     /** 兜底：未知异常 */
