@@ -10,9 +10,19 @@ import java.util.Map;
 public interface RiskReportUploadService {
 
     /**
-     * 保存文件并创建批次，异步处理导入
+     * 校验 Excel（及可选 ZIP）匹配情况，不落库
      */
-    Map<String, Object> startUpload(MultipartFile file, SysUser user, String submitOrgName);
+    Map<String, Object> previewUpload(MultipartFile excel, MultipartFile zip, SysUser user, String submitOrgName);
+
+    /**
+     * 确认导入（基于 previewToken）
+     */
+    Map<String, Object> confirmUpload(String previewToken, SysUser user, String submitOrgName);
+
+    /**
+     * 保存文件并创建批次，异步处理导入（可选 ZIP 报告包）
+     */
+    Map<String, Object> startUpload(MultipartFile file, MultipartFile zip, SysUser user, String submitOrgName);
 
     void processBatchAsync(Long batchId);
 

@@ -68,16 +68,19 @@ public class RiskReportServiceImpl implements RiskReportService {
     @Override
     public Map<String, Object> searchShared(RiskClueSearchQuery query) {
         query.setIsShared(1);
+        query.setReviewStatus(20);
+        query.setIsWarehouse(1);
         return riskClueService.search(query);
     }
 
     @Override
     public Map<String, Object> getSharedStats() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("total", countByQuery(null, null, null, 1));
-        stats.put("pending", countByQuery(null, 10, null, 1));
-        stats.put("reviewed", countByQuery(null, 20, null, 1));
-        stats.put("warehoused", countByQuery(null, 20, 1, 1));
+        long warehousedShared = countByQuery(null, 20, 1, 1);
+        stats.put("total", warehousedShared);
+        stats.put("pending", 0L);
+        stats.put("reviewed", warehousedShared);
+        stats.put("warehoused", warehousedShared);
         return stats;
     }
 

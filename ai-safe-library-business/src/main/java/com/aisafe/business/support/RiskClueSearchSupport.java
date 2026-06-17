@@ -66,7 +66,7 @@ public final class RiskClueSearchSupport {
         if (body == null) {
             body = Map.of();
         }
-        return buildSearchQuery(
+        RiskClueSearchQuery query = buildSearchQuery(
                 (String) body.get("keyword"),
                 (String) body.get("riskCategory"),
                 body.get("reviewStatus"),
@@ -90,6 +90,24 @@ public final class RiskClueSearchSupport {
                 body.get("page") != null ? ((Number) body.get("page")).intValue() : 1,
                 body.get("size") != null ? ((Number) body.get("size")).intValue() : 10,
                 reportUnit);
+        applyYesNoFilters(query, body);
+        return query;
+    }
+
+    public static void applyYesNoFilters(RiskClueSearchQuery query, Map<String, Object> body) {
+        if (query == null || body == null) {
+            return;
+        }
+        query.setIsVerify(parseReviewStatus(body.get("isVerify")));
+        query.setIsSubmit(parseReviewStatus(body.get("isSubmit")));
+    }
+
+    public static void applyYesNoFilters(RiskClueSearchQuery query, Object isVerify, Object isSubmit) {
+        if (query == null) {
+            return;
+        }
+        query.setIsVerify(parseReviewStatus(isVerify));
+        query.setIsSubmit(parseReviewStatus(isSubmit));
     }
 
     public static String firstNonBlank(String primary, String fallback) {

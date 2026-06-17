@@ -50,7 +50,8 @@ public class RiskReviewServiceImpl implements RiskReviewService {
     private static final DateTimeFormatter ES_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final int BATCH_REVIEW_PAGE_SIZE = 100;
-    private static final int MAX_FAILURE_DETAILS = 20;
+    private static final int MAX_FAILURE_DETAILS = 100;
+    private static final int MAX_BATCH_REVIEW_REFRESH_RETRIES = 5;
 
     private final BizRiskClueRepository bizRiskClueRepository;
     private final BizRiskReviewRecordRepository bizRiskReviewRecordRepository;
@@ -95,6 +96,8 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         record.setRiskDescriptionHuman(trimToNull(dto.getRiskDescriptionHuman()));
         record.setOperatingEntityHuman(trimToNull(dto.getOperatingEntityHuman()));
         record.setReviewComment(trimToNull(dto.getReviewComment()));
+        record.setIsVerify(normalizeOptionalYesNo(dto.getIsVerify()));
+        record.setIsSubmit(normalizeOptionalYesNo(dto.getIsSubmit()));
         record.setReviewer(user.getUsername());
         record.setReviewerName(reviewerName);
         record.setReviewDept(deptName);
@@ -106,13 +109,24 @@ public class RiskReviewServiceImpl implements RiskReviewService {
             record.setWarehouseTime(null);
         }
 
-        updateClueAfterReview(dto.getClueId(), dto, reviewerName, deptName, auditTime);
         saveReviewRecord(record);
+        try {
+            updateClueAfterReview(dto.getClueId(), dto, reviewerName, deptName, auditTime);
+        } catch (RuntimeException ex) {
+            deleteReviewRecord(record.getId());
+            throw ex;
+        }
 
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("clueId", dto.getClueId());
         snapshot.put("isWarehouse", normalizeWarehouse(dto.getIsWarehouse()));
         snapshot.put("riskCategory", trimToNull(dto.getRiskCategory()));
+        if (dto.getIsVerify() != null) {
+            snapshot.put("isVerify", normalizeOptionalYesNo(dto.getIsVerify()));
+        }
+        if (dto.getIsSubmit() != null) {
+            snapshot.put("isSubmit", normalizeOptionalYesNo(dto.getIsSubmit()));
+        }
         auditLogService.recordOperSuccess(
                 "审核风险线索", BusinessType.REVIEW, "RiskReviewServiceImpl.review", snapshot);
         logger.info("审核完成 clueId={} reviewer={}", dto.getClueId(), reviewerName);
@@ -142,11 +156,18 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         int failed = 0;
         List<BatchReviewResult.FailureItem> failures = new ArrayList<>();
         Set<String> processedIds = new HashSet<>();
+        boolean failuresTruncated = false;
+        int emptyPageRetries = 0;
 
         while (true) {
             Map<String, Object> pageResult = riskClueService.search(searchQuery);
             List<BizRiskClue> rows = extractClueRows(pageResult);
             if (rows.isEmpty()) {
+                if (processedIds.size() < totalPending && emptyPageRetries < MAX_BATCH_REVIEW_REFRESH_RETRIES) {
+                    refreshClueIndex();
+                    emptyPageRetries++;
+                    continue;
+                }
                 break;
             }
 
@@ -165,10 +186,15 @@ public class RiskReviewServiceImpl implements RiskReviewService {
                 pendingRows.add(clue);
             }
 
-            // ES 近实时索引未刷新时，可能反复返回同一页；无新线索则结束，避免重复审核
             if (pendingRows.isEmpty()) {
+                if (processedIds.size() < totalPending && emptyPageRetries < MAX_BATCH_REVIEW_REFRESH_RETRIES) {
+                    refreshClueIndex();
+                    emptyPageRetries++;
+                    continue;
+                }
                 break;
             }
+            emptyPageRetries = 0;
 
             for (BizRiskClue clue : pendingRows) {
                 processedIds.add(clue.getId());
@@ -176,7 +202,7 @@ public class RiskReviewServiceImpl implements RiskReviewService {
                 String validationError = validateAutoReview(dto);
                 if (validationError != null) {
                     failed++;
-                    addFailure(failures, clue, validationError);
+                    failuresTruncated |= addFailure(failures, clue, validationError);
                     continue;
                 }
                 try {
@@ -185,25 +211,52 @@ public class RiskReviewServiceImpl implements RiskReviewService {
                 } catch (Exception ex) {
                     failed++;
                     String reason = ex.getMessage() != null ? ex.getMessage() : "审核失败";
-                    addFailure(failures, clue, reason);
+                    failuresTruncated |= addFailure(failures, clue, reason);
                     logger.warn("批量审核失败 clueId={} reason={}", clue.getId(), reason);
                 }
             }
+            refreshClueIndex();
         }
 
         result.setSuccess(success);
         result.setFailed(failed);
+        result.setProcessedCount(success + failed);
+        result.setFailuresTruncated(failuresTruncated);
         result.setFailures(failures);
 
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("total", result.getTotal());
+        snapshot.put("processedCount", result.getProcessedCount());
         snapshot.put("success", success);
         snapshot.put("failed", failed);
+        snapshot.put("failuresTruncated", failuresTruncated);
         snapshot.put("isWarehouse", warehouseDecision);
         auditLogService.recordOperSuccess(
                 "批量审核风险线索", BusinessType.REVIEW, "RiskReviewServiceImpl.batchReviewByQuery", snapshot);
-        logger.info("批量审核完成 total={} success={} failed={}", result.getTotal(), success, failed);
+        logger.info("批量审核完成 total={} processed={} success={} failed={}",
+                result.getTotal(), result.getProcessedCount(), success, failed);
         return result;
+    }
+
+    private void refreshClueIndex() {
+        try {
+            elasticsearchOperations.indexOps(BizRiskClue.class).refresh();
+        } catch (Exception ex) {
+            logger.warn("刷新线索索引失败", ex);
+        }
+    }
+
+    private void deleteReviewRecord(String recordId) {
+        if (!hasText(recordId)) {
+            return;
+        }
+        try {
+            elasticsearchOperations.delete(
+                    recordId,
+                    elasticsearchOperations.getIndexCoordinatesFor(BizRiskReviewRecord.class));
+        } catch (Exception ex) {
+            logger.warn("回滚审核记录失败 recordId={}", recordId, ex);
+        }
     }
 
     @Override
@@ -240,6 +293,8 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         putIfHasText(doc, "audit_dept_name", deptName);
         doc.put("audit_time", auditTime.format(ES_DATE_TIME));
         putIfHasText(doc, "audit_reason", dto.getReviewComment());
+        applyOptionalYesNo(doc, "is_verify", dto.getIsVerify());
+        applyOptionalYesNo(doc, "is_submit", dto.getIsSubmit());
         doc.put("update_time", auditTime.format(ES_DATE_TIME));
 
         UpdateQuery updateQuery = UpdateQuery.builder(clueId)
@@ -271,6 +326,8 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         } else {
             doc.put("warehouse_time", null);
         }
+        applyOptionalYesNo(doc, "is_verify", record.getIsVerify());
+        applyOptionalYesNo(doc, "is_submit", record.getIsSubmit());
 
         String recordId = UUID.randomUUID().toString();
         UpdateQuery indexQuery = UpdateQuery.builder(recordId)
@@ -350,6 +407,20 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         return isWarehouse != 0 ? 1 : 0;
     }
 
+    private Integer normalizeOptionalYesNo(Integer value) {
+        if (value == null) {
+            return null;
+        }
+        return value != 0 ? 1 : 0;
+    }
+
+    private void applyOptionalYesNo(Document doc, String field, Integer value) {
+        Integer normalized = normalizeOptionalYesNo(value);
+        if (normalized != null) {
+            doc.put(field, normalized);
+        }
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -386,6 +457,8 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         dto.setRiskCategory(resolveReportCategory(clue));
         dto.setRiskDescriptionHuman(resolveRiskDescription(clue));
         dto.setOperatingEntityHuman(trimToNull(clue.getOperatingEntity()));
+        dto.setIsVerify(clue.getIsVerify());
+        dto.setIsSubmit(clue.getIsSubmit());
         return dto;
     }
 
@@ -428,11 +501,12 @@ public class RiskReviewServiceImpl implements RiskReviewService {
         return null;
     }
 
-    private void addFailure(List<BatchReviewResult.FailureItem> failures, BizRiskClue clue, String reason) {
+    private boolean addFailure(List<BatchReviewResult.FailureItem> failures, BizRiskClue clue, String reason) {
         if (failures.size() >= MAX_FAILURE_DETAILS) {
-            return;
+            return true;
         }
         String eventName = hasText(clue.getEventName()) ? clue.getEventName().trim() : clue.getId();
         failures.add(new BatchReviewResult.FailureItem(clue.getId(), eventName, reason));
+        return false;
     }
 }

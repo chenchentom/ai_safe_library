@@ -66,6 +66,12 @@ public class BizRiskReviewRecord {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime warehouseTime;
 
+    @Field(name = "is_verify", type = FieldType.Integer)
+    private Integer isVerify;
+
+    @Field(name = "is_submit", type = FieldType.Integer)
+    private Integer isSubmit;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -117,4 +123,10 @@ public class BizRiskReviewRecord {
 
     public LocalDateTime getWarehouseTime() { return warehouseTime; }
     public void setWarehouseTime(LocalDateTime warehouseTime) { this.warehouseTime = warehouseTime; }
+
+    public Integer getIsVerify() { return isVerify; }
+    public void setIsVerify(Integer isVerify) { this.isVerify = isVerify; }
+
+    public Integer getIsSubmit() { return isSubmit; }
+    public void setIsSubmit(Integer isSubmit) { this.isSubmit = isSubmit; }
 }

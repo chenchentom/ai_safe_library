@@ -6,6 +6,8 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
+import com.aisafe.business.dto.ReportAttachmentSnapshot;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -131,6 +133,12 @@ public class BizRiskClue {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime shareTime;
 
+    @Field(name = "has_report", type = FieldType.Integer)
+    private Integer hasReport;
+
+    @Field(name = "report_attachments", type = FieldType.Nested)
+    private List<ReportAttachmentSnapshot> reportAttachments;
+
     // ==================== Getters and Setters ====================
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -242,6 +250,14 @@ public class BizRiskClue {
 
     public LocalDateTime getShareTime() { return shareTime; }
     public void setShareTime(LocalDateTime shareTime) { this.shareTime = shareTime; }
+
+    public Integer getHasReport() { return hasReport; }
+    public void setHasReport(Integer hasReport) { this.hasReport = hasReport; }
+
+    public List<ReportAttachmentSnapshot> getReportAttachments() { return reportAttachments; }
+    public void setReportAttachments(List<ReportAttachmentSnapshot> reportAttachments) {
+        this.reportAttachments = reportAttachments;
+    }
 
     // ==================== 旧字段别名方法（向后兼容） ====================
     public String getTitle() { return eventName; }

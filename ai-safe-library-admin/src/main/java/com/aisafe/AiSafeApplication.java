@@ -2,6 +2,7 @@ package com.aisafe;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * AI安全事件库 — 应用入口
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 包括 common、framework、system、business 四个子模块
  */
 @SpringBootApplication
+@EnableScheduling
 public class AiSafeApplication {
 
     public static void main(String[] args) {

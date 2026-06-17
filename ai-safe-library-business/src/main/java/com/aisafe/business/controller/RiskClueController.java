@@ -67,6 +67,8 @@ public class RiskClueController {
             @RequestParam(required = false) String sourceType,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Object isVerify,
+            @RequestParam(required = false) Object isSubmit,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -76,6 +78,7 @@ public class RiskClueController {
                 isWarehouse, auditRiskCategory, operatingEntityHuman, auditUserName,
                 auditStartTime, auditEndTime, submitUserName, submitOrgName,
                 sourceType, startTime, endTime, page, size, null);
+        RiskClueSearchSupport.applyYesNoFilters(query, isVerify, isSubmit);
         return R.ok(riskClueService.search(query));
     }
 
@@ -124,6 +127,15 @@ public class RiskClueController {
     public R<Map<String, String>> create(@RequestBody RiskClueManualCreateDTO dto) {
         String id = riskClueManualService.createClue(dto);
         return R.ok(Map.of("id", id));
+    }
+
+    /**
+     * 编辑线索基础信息（风险线索库，待审核/已审核，不校验报送部门）
+     */
+    @PutMapping("/{id}")
+    public R<String> update(@PathVariable String id, @RequestBody RiskClueManualCreateDTO dto) {
+        riskClueManualService.updatePendingClue(id, dto);
+        return R.ok("更新成功");
     }
 
     @GetMapping("/{id}")

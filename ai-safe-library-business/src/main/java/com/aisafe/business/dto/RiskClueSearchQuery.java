@@ -62,6 +62,12 @@ public class RiskClueSearchQuery {
     /** 是否共享：0=否，1=是 */
     private Integer isShared;
 
+    /** 是否验证：0=否，1=是 */
+    private Integer isVerify;
+
+    /** 是否报送：0=否，1=是 */
+    private Integer isSubmit;
+
     /** 兼容旧参数：来源类型精确匹配 submission_channel */
     private String sourceType;
 
@@ -131,6 +137,12 @@ public class RiskClueSearchQuery {
 
     public Integer getIsShared() { return isShared; }
     public void setIsShared(Integer isShared) { this.isShared = isShared; }
+
+    public Integer getIsVerify() { return isVerify; }
+    public void setIsVerify(Integer isVerify) { this.isVerify = isVerify; }
+
+    public Integer getIsSubmit() { return isSubmit; }
+    public void setIsSubmit(Integer isSubmit) { this.isSubmit = isSubmit; }
 
     public String getSourceType() { return sourceType; }
     public void setSourceType(String sourceType) { this.sourceType = sourceType; }

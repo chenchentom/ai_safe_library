@@ -1,6 +1,7 @@
 package com.aisafe.business.support;
 
 import com.aisafe.business.document.BizRiskClue;
+import com.aisafe.business.dto.CategoryResolveResult;
 import com.aisafe.business.dto.RiskReportExcelRow;
 import com.aisafe.system.entity.SysDept;
 import com.aisafe.system.entity.SysUser;
@@ -26,7 +27,11 @@ public class RiskReportClueBuilder {
         this.deptService = deptService;
     }
 
-    public BizRiskClue buildPendingClue(RiskReportExcelRow row, SysUser loginUser, LocalDateTime defaultTime) {
+    public BizRiskClue buildPendingClue(RiskReportExcelRow row,
+                                        SysUser loginUser,
+                                        LocalDateTime defaultTime,
+                                        String classReport1,
+                                        String classReport2) {
         LocalDateTime now = defaultTime != null ? defaultTime : LocalDateTime.now();
         BizRiskClue clue = new BizRiskClue();
         clue.setNumber(row.getNumber());
@@ -43,7 +48,7 @@ public class RiskReportClueBuilder {
         clue.setIsSubmit(row.getIsSubmit() != null ? row.getIsSubmit() : 1);
         clue.setSubmissionChannel(trim(row.getSubmissionChannel()));
 
-        applyReportCategory(clue, row.getClassReport1(), row.getClassReport2());
+        applyReportCategory(clue, classReport1, classReport2);
         applyReportMeta(clue, row, loginUser, now);
         applyPendingDefaults(clue);
         clue.setDeleted(0);
@@ -69,7 +74,7 @@ public class RiskReportClueBuilder {
             return RiskReportImportError.of("SUBMISSION_TIME_INVALID",
                     "第 " + row.getRowNum() + " 行：报送时间无法解析");
         }
-        return categoryValidator.validate(row);
+        return null;
     }
 
     private void applyReportCategory(BizRiskClue clue, String level1, String level2) {

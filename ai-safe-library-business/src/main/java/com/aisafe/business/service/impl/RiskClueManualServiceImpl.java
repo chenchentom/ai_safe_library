@@ -53,6 +53,20 @@ public class RiskClueManualServiceImpl implements RiskClueManualService {
     }
 
     @Override
+    public String createReport(RiskClueManualCreateDTO dto, String reportUnit) {
+        validateBase(dto);
+        LocalDateTime now = LocalDateTime.now();
+        SysUser user = resolveCurrentUser();
+        BizRiskClue clue = buildBaseClue(dto, user, now);
+        applyPendingClueDefaults(clue);
+        applyAutoReportMeta(clue, dto, user, now);
+        if (org.springframework.util.StringUtils.hasText(reportUnit)) {
+            clue.setSubmitOrgName(reportUnit.trim());
+        }
+        return riskClueService.save(clue);
+    }
+
+    @Override
     public String createEvent(RiskClueManualCreateDTO dto) {
         validateBase(dto);
         LocalDateTime now = LocalDateTime.now();
@@ -140,6 +154,15 @@ public class RiskClueManualServiceImpl implements RiskClueManualService {
 
     @Override
     public void updatePendingReport(String id, RiskClueManualCreateDTO dto, String reportUnit) {
+        updatePendingClueInternal(id, dto, reportUnit);
+    }
+
+    @Override
+    public void updatePendingClue(String id, RiskClueManualCreateDTO dto) {
+        updatePendingClueInternal(id, dto, null);
+    }
+
+    private void updatePendingClueInternal(String id, RiskClueManualCreateDTO dto, String reportUnit) {
         validateBase(dto);
         if (!hasText(id)) {
             throw new BusinessException("线索ID不能为空");
@@ -148,12 +171,15 @@ public class RiskClueManualServiceImpl implements RiskClueManualService {
         if (existing == null) {
             throw new BusinessException("线索不存在");
         }
-        if (existing.getAuditStatus() == null || existing.getAuditStatus() != 10) {
-            throw new BusinessException("仅未审核的报送可编辑");
+        if (existing.getAuditStatus() == null
+                || (existing.getAuditStatus() != 10 && existing.getAuditStatus() != 20)) {
+            throw new BusinessException("当前状态的线索不可编辑");
         }
-        String submitOrg = trimToNull(existing.getSubmitOrgName());
-        if (!hasText(reportUnit) || !reportUnit.equals(submitOrg)) {
-            throw new BusinessException("无权编辑该报送");
+        if (reportUnit != null) {
+            String submitOrg = trimToNull(existing.getSubmitOrgName());
+            if (!hasText(reportUnit) || !reportUnit.equals(submitOrg)) {
+                throw new BusinessException("无权编辑该报送");
+            }
         }
 
         existing.setEventName(dto.getEventName().trim());
